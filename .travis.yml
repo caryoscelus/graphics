@@ -1,9 +1,4 @@
 language: haskell
 
-before_install:
-  - git clone git://github.com/haskell-game/linear.git
-  - cabal update
-  - cabal install linear/
-
 notifications:
   irc: "irc.freenode.org#haskell-game"
