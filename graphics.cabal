@@ -27,3 +27,4 @@ library
                      -- it has been uploaded to Hackage
                      linear == 1.1.*
   default-language:  Haskell2010
+  ghc-options:       -Wall
