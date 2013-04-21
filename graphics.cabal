@@ -11,7 +11,7 @@ author:              Jake McArthur <Jake.McArthur@gmail.com>
 maintainer:          Jake McArthur <Jake.McArthur@gmail.com>
 category:            Graphics
 build-type:          Simple
-cabal-version:       >=1.16
+cabal-version:       >=1.14
 
 source-repository head
   type:              git
