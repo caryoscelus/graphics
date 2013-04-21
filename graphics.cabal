@@ -18,7 +18,7 @@ source-repository head
   location:          git://github.com/haskell-game/graphics.git
 
 library
-  build-depends:     base == 4.6.*,
+  build-depends:     base >= 4.5,
                      -- for now, this needs a patched version of
                      -- linear available from
                      -- <git://github.com/haskell-game/linear.git>,
