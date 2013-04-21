@@ -1,0 +1,21 @@
+name:                graphics
+version:             0.0.0
+synopsis:            A library for working with 2D graphics
+description:         A library for working with 2D graphics with a
+                     simple semantics. This library is part of the
+                     haskell-game collection.
+homepage:            https://github.com/haskell-game
+license:             MIT
+license-file:        LICENSE
+author:              Jake McArthur <Jake.McArthur@gmail.com>
+maintainer:          Jake McArthur <Jake.McArthur@gmail.com>
+category:            Graphics
+build-type:          Simple
+cabal-version:       >=1.8
+
+source-repository head
+  type:              git
+  location:          git://github.com/haskell-game/graphics.git
+
+library
+  build-depends:     base ==4.6.*
