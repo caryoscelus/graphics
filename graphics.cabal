@@ -11,7 +11,7 @@ author:              Jake McArthur <Jake.McArthur@gmail.com>
 maintainer:          Jake McArthur <Jake.McArthur@gmail.com>
 category:            Graphics
 build-type:          Simple
-cabal-version:       >=1.8
+cabal-version:       >=1.16
 
 source-repository head
   type:              git
@@ -19,3 +19,4 @@ source-repository head
 
 library
   build-depends:     base ==4.6.*
+  default-language:  Haskell2010
