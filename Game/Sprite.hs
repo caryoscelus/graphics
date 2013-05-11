@@ -14,7 +14,6 @@ data Texture =
           , texWidth  :: {-# UNPACK #-} !Word
           , texHeight :: {-# UNPACK #-} !Word
           }
-  deriving (Eq, Ord, Read, Show)
 
 data Sprite =
   Sprite { spriteTexId  :: {-# UNPACK #-} !GLuint
@@ -23,7 +22,6 @@ data Sprite =
          , texBottom    :: {-# UNPACK #-} !GLfloat
          , texLeft      :: {-# UNPACK #-} !GLfloat
          }
-  deriving (Eq, Ord, Read, Show)
 
 -- TODO add support for mipmaps
 
