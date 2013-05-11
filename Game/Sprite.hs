@@ -1,5 +1,5 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
-module Game.Sprite where
+module Game.Sprite (Texture (), Sprite (), texture, sprite) where
 
 import Codec.Picture
 import Codec.Picture.Types
@@ -49,7 +49,7 @@ texture dynImg = do
           return $! (fromIntegral w, fromIntegral h)
         unsafeWith = Vector.unsafeWith . imageData
 
--- | @sprite top right bottom left texture@ creates a sprite from a texture atlas
+-- | @sprite top right bottom left texture@ creates a sprite from a texture
 sprite :: Word -> Word -> Word -> Word -> Texture -> Sprite
 sprite t r b l tex = Sprite (texId tex) (coord t h) (coord r w) (coord b h) (coord l w)
   where coord x y = fromIntegral x / y
