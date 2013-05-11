@@ -22,6 +22,7 @@ library
                      linear == 1.1.*,
                      JuicyPixels == 3.0.*,
                      OpenGLRaw == 1.3.*,
+                     transformers == 0.3.*,
                      vector == 0.10.*
   default-language:  Haskell2010
   exposed-modules:   Game.Graphics,
