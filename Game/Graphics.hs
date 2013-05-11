@@ -24,6 +24,7 @@ runSpace :: Monoid r => Space c a -> (AffineTransform c -> a -> r) -> r
 {-# INLINE runSpace #-}
 runSpace (SpaceT s) f = runIdentity . s $ (fmap.fmap) Identity f
 
+-- TODO support Show (m a) instead of just Show a
 instance (Show a, Show c) => Show (Space c a) where
   showsPrec p s =
     showParen (p > 10) $
