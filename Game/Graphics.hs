@@ -12,6 +12,8 @@ import Text.Show
 
 import Game.AffineTransform as Transform
 
+-- TODO Reorganize modules. They don't really make any sense right now.
+
 -- CR jmcarthur: It is not immediately clear whether this representation is
 -- actually a win or a loss in terms of efficiency, especially in terms of
 -- duplication of work.
