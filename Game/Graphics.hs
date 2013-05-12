@@ -69,6 +69,8 @@ instance (Monad m, Num c) => MonadPlus (SpaceT c m) where
   {-# INLINE mplus #-}
   SpaceT f `mplus` SpaceT g = SpaceT $ (liftM2.liftM2) (<>) f g
 
+-- TODO put these into a MonadSpace class
+
 transform :: AffineTransform c -> SpaceT c m ()
 {-# INLINE transform #-}
 transform t = SpaceT $ \k -> k t ()
