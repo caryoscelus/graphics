@@ -3,27 +3,32 @@ module Game.Sprite (Texture (), Sprite (), texture, sprite) where
 
 import Codec.Picture
 import Codec.Picture.Types
-import qualified Data.Vector.Storable as Vector
-import Graphics.Rendering.OpenGL.Raw.Core32
+import Control.Applicative
 import Data.Word
 import Foreign.Marshal.Alloc
 import Foreign.Storable
+import Graphics.Rendering.OpenGL.Raw.Core32
+import Linear.V2
+import qualified Data.Vector.Storable as Vector
 
 data Texture =
   Texture { texId     :: {-# UNPACK #-} !GLuint
-          , texWidth  :: {-# UNPACK #-} !Word
-          , texHeight :: {-# UNPACK #-} !Word
+          , texSize   :: {-# UNPACK #-} !(V2 Word)
           }
 
 data Sprite =
   Sprite { spriteTexId  :: {-# UNPACK #-} !GLuint
-         , texTop       :: {-# UNPACK #-} !GLfloat
-         , texRight     :: {-# UNPACK #-} !GLfloat
-         , texBottom    :: {-# UNPACK #-} !GLfloat
-         , texLeft      :: {-# UNPACK #-} !GLfloat
+         , spriteTop    :: {-# UNPACK #-} !GLfloat
+         , spriteRight  :: {-# UNPACK #-} !GLfloat
+         , spriteBottom :: {-# UNPACK #-} !GLfloat
+         , spriteLeft   :: {-# UNPACK #-} !GLfloat
          }
 
--- TODO add support for mipmaps
+-- TODO add support for custom mipmaps, or write a high quality
+-- mipmapper right here
+
+-- TODO add support for using texture arrays automatically on machines
+-- that support them
 
 -- | Create a texture from an image loaded using JuicyPixels.
 --
@@ -40,7 +45,8 @@ texture dynImg = do
     ImageRGBF   img -> texImage2D gl_RGB32F       gl_RGB  gl_FLOAT         img 
     ImageRGBA8  img -> texImage2D gl_SRGB8_ALPHA8 gl_RGBA gl_UNSIGNED_BYTE img
     ImageYCbCr8 img -> texImage2D gl_SRGB8        gl_RGB  gl_UNSIGNED_BYTE (convertImage img :: Image PixelRGB8)
-  return $! Texture tid w h
+  glGenerateMipmap gl_TEXTURE_2D
+  return $! Texture tid $ V2 w h
   where texImage2D internal format type_ img = do
           let w = imageWidth img
               h = imageHeight img
@@ -53,5 +59,4 @@ texture dynImg = do
 sprite :: Word -> Word -> Word -> Word -> Texture -> Sprite
 sprite t r b l tex = Sprite (texId tex) (coord t h) (coord r w) (coord b h) (coord l w)
   where coord x y = fromIntegral x / y
-        w = fromIntegral $ texWidth tex
-        h = fromIntegral $ texHeight tex
+        V2 w h = fromIntegral <$> texSize tex
