@@ -31,10 +31,9 @@ data Sprite =
 -- that support them
 
 -- | Create a texture from an image loaded using JuicyPixels.
---
--- OpenGL effects: changes the texture bound to GL_TEXTURE_2D
 texture :: DynamicImage -> IO Texture
 texture dynImg = do
+  origTid <- fmap fromIntegral . alloca $ \ptr -> glGetIntegerv gl_TEXTURE_BINDING_2D ptr >> peek ptr
   tid <- alloca $ \ptr -> glGenTextures 1 ptr >> peek ptr
   glBindTexture gl_TEXTURE_2D tid
   (w, h) <- case dynImg of
@@ -46,6 +45,7 @@ texture dynImg = do
     ImageRGBA8  img -> texImage2D gl_SRGB8_ALPHA8 gl_RGBA gl_UNSIGNED_BYTE img
     ImageYCbCr8 img -> texImage2D gl_SRGB8        gl_RGB  gl_UNSIGNED_BYTE (convertImage img :: Image PixelRGB8)
   glGenerateMipmap gl_TEXTURE_2D
+  glBindTexture gl_TEXTURE_2D origTid
   return $! Texture tid $ V2 w h
   where texImage2D internal format type_ img = do
           let w = imageWidth img
