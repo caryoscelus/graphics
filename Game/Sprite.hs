@@ -1,5 +1,7 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
-module Game.Sprite (Texture (), Sprite (), texture, sprite) where
+module Game.Sprite (Texture (), Sprite (..), texture, sprite) where
+
+-- TODO control export better
 
 import Codec.Picture
 import Codec.Picture.Types
