@@ -1,96 +1,51 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ImplicitParams #-}
 module Game.Graphics where
 
 import Control.Applicative
 import Control.Monad
-import Data.Functor.Identity
-import Data.Monoid
+import Control.Monad.Fix
+import Control.Monad.Trans.Writer
+import Data.Foldable
+import Data.Traversable
 import Linear.V2
-import Text.Show
 
 import Game.AffineTransform as Transform
 
--- TODO Reorganize modules. They don't really make any sense right now.
+-- TODO Some sort of DList-like monad instead of []
+-- TODO A more specialized WriterT (maybe the whole thing should just be specialized)
+newtype Space c a = Space { unSpace :: WriterT (AffineTransform c) [] a }
+                  deriving ( Functor, Applicative, Monad, Alternative
+                           , MonadPlus, MonadFix, Foldable, Traversable
+                           )
 
--- CR jmcarthur: It is not immediately clear whether this representation is
--- actually a win or a loss in terms of efficiency, especially in terms of
--- duplication of work.
-newtype SpaceT c m a =
-  SpaceT { runSpaceT :: forall r. Monoid r => (AffineTransform c -> a -> m r) -> m r }
+runSpace :: Space c a -> [(a, AffineTransform c)]
+runSpace = runWriterT . unSpace
 
-type Space c a = SpaceT c Identity a
+-- TODO put these into a MonadSpace class?
 
-runSpace :: Monoid r => Space c a -> (AffineTransform c -> a -> r) -> r
-{-# INLINE runSpace #-}
-runSpace (SpaceT s) f = runIdentity . s $ (fmap.fmap) Identity f
-
--- TODO support Show (m a) instead of just Show a
-instance (Show a, Show c) => Show (Space c a) where
-  showsPrec p s =
-    showParen (p > 10) $
-    showString "asum " .
-    showListWith id (runSpace s showOne)
-    where showOne t x =
-            pure $
-            showsPrec 4 x .
-            showString " <$ " .
-            showString "transform " .
-            showsPrec 11 t
-
-instance Functor (SpaceT c m) where
-  {-# INLINE fmap #-}
-  fmap f (SpaceT s) = SpaceT $ \k -> s $ \t -> k t . f
-
-instance Num c => Applicative (SpaceT c m) where
-  {-# INLINE pure #-}
-  pure x = SpaceT $ \k -> k mempty x
-  {-# INLINE (<*>) #-}
-  SpaceT sf <*> SpaceT sx =
-    SpaceT $ \k -> sf $ \t f -> sx $ \t' -> k (t <> t') . f
-
-instance (Applicative m, Num c) => Alternative (SpaceT c m) where
-  {-# INLINE empty #-}
-  empty = SpaceT $ (pure.pure) mempty
-  {-# INLINE (<|>) #-}
-  SpaceT f <|> SpaceT g = SpaceT $ (liftA2.liftA2) (<>) f g
-
-instance Num c => Monad (SpaceT c m) where
-  {-# INLINE return #-}
-  return = pure
-  {-# INLINE (>>=) #-}
-  SpaceT s >>= f = SpaceT $ \k -> s $ \t x -> case f x of
-    SpaceT s' -> s' $ \t' -> k $ t <> t'
-
-instance (Monad m, Num c) => MonadPlus (SpaceT c m) where
-  {-# INLINE mzero #-}
-  mzero = SpaceT $ (return.return) mempty
-  {-# INLINE mplus #-}
-  SpaceT f `mplus` SpaceT g = SpaceT $ (liftM2.liftM2) (<>) f g
-
--- TODO put these into a MonadSpace class
-
-transform :: AffineTransform c -> SpaceT c m ()
+transform :: Num c => AffineTransform c -> Space c ()
 {-# INLINE transform #-}
-transform t = SpaceT $ \k -> k t ()
+transform = Space . tell
 
-translate :: Num c => V2 c -> SpaceT c m ()
+translate :: Num c => V2 c -> Space c ()
 {-# INLINE translate #-}
 translate = transform . Transform.translate
 
-rotate :: Floating c => c -> SpaceT c m ()
+rotate :: Floating c => c -> Space c ()
 {-# INLINE rotate #-}
 rotate = transform . Transform.rotate
 
-scale :: Num c => V2 c -> SpaceT c m ()
+scale :: Num c => V2 c -> Space c ()
 {-# INLINE scale #-}
 scale = transform . Transform.scale
 
-shear :: Num c => V2 c -> SpaceT c m ()
+shear :: Num c => V2 c -> Space c ()
 {-# INLINE shear #-}
 shear = transform . Transform.shear
 
-reflect :: Num c => V2 c -> SpaceT c m ()
+reflect :: Num c => V2 c -> Space c ()
 {-# INLINE reflect #-}
 reflect = transform . Transform.reflect
