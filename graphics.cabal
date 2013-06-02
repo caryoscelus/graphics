@@ -28,5 +28,6 @@ library
   exposed-modules:   Game.Graphics,
                      -- totally the wrong place
                      Game.AffineTransform,
-                     Game.Sprite
+                     Game.Sprite,
+                     Game.Stream
   ghc-options:       -Wall
