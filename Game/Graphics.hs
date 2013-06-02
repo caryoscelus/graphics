@@ -1,3 +1,4 @@
+{-# OPTIONS -fexpose-all-unfoldings #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RankNTypes #-}
@@ -27,25 +28,19 @@ runSpace = runWriterT . unSpace
 -- TODO put these into a MonadSpace class?
 
 transform :: Num c => AffineTransform c -> Space c ()
-{-# INLINE transform #-}
 transform = Space . tell
 
 translate :: Num c => V2 c -> Space c ()
-{-# INLINE translate #-}
 translate = transform . Transform.translate
 
 rotate :: Floating c => c -> Space c ()
-{-# INLINE rotate #-}
 rotate = transform . Transform.rotate
 
 scale :: Num c => V2 c -> Space c ()
-{-# INLINE scale #-}
 scale = transform . Transform.scale
 
 shear :: Num c => V2 c -> Space c ()
-{-# INLINE shear #-}
 shear = transform . Transform.shear
 
 reflect :: Num c => V2 c -> Space c ()
-{-# INLINE reflect #-}
 reflect = transform . Transform.reflect

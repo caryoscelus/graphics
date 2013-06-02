@@ -1,6 +1,7 @@
+{-# OPTIONS -fexpose-all-unfoldings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ViewPatterns #-}
-module Stream where
+module Game.Stream where
 
 import Control.Applicative
 import Data.List
@@ -19,18 +20,14 @@ data Attribs =
           }
 
 instance Storable Attribs where
-  {-# INLINE sizeOf #-}
   sizeOf    _ = sizeOf    (undefined :: GLfloat) * 4
-  {-# INLINE alignment #-}
   alignment _ = alignment (undefined :: GLfloat)
-  {-# INLINE peekElemOff #-}
   peekElemOff (castPtr -> ptr) off =
     Attribs                 <$>
     peekElemOff ptr  off    <*>
     peekElemOff ptr (off+1) <*>
     peekElemOff ptr (off+2) <*>
     peekElemOff ptr (off+3)
-  {-# INLINE pokeElemOff #-}
   pokeElemOff (castPtr -> ptr) off Attribs{..} = do
     pokeElemOff ptr  off    xPos
     pokeElemOff ptr (off+1) yPos
@@ -44,17 +41,13 @@ data TriangleAttribs =
                   }
 
 instance Storable TriangleAttribs where
-  {-# INLINE sizeOf #-}
   sizeOf    _ = sizeOf    (undefined :: Attribs) * 3
-  {-# INLINE alignment #-}
   alignment _ = alignment (undefined :: Attribs)
-  {-# INLINE peekElemOff #-}
   peekElemOff (castPtr -> ptr) off =
     TriangleAttribs         <$>
     peekElemOff ptr  off    <*>
     peekElemOff ptr (off+1) <*>
     peekElemOff ptr (off+2)
-  {-# INLINE pokeElemOff #-}
   pokeElemOff (castPtr -> ptr) off TriangleAttribs{..} = do
     pokeElemOff ptr  off    corner1
     pokeElemOff ptr (off+1) corner2
@@ -66,22 +59,17 @@ data QuadAttribs =
               }
 
 instance Storable QuadAttribs where
-  {-# INLINE sizeOf #-}
   sizeOf    _ = sizeOf    (undefined :: TriangleAttribs) * 3
-  {-# INLINE alignment #-}
   alignment _ = alignment (undefined :: TriangleAttribs)
-  {-# INLINE peekElemOff #-}
   peekElemOff (castPtr -> ptr) off =
     QuadAttribs             <$>
     peekElemOff ptr  off    <*>
     peekElemOff ptr (off+1)
-  {-# INLINE pokeElemOff #-}
   pokeElemOff (castPtr -> ptr) off QuadAttribs{..} = do
     pokeElemOff ptr  off    upperLeft
     pokeElemOff ptr (off+1) lowerRight
 
 pokeSpriteOff :: Ptr QuadAttribs -> Int -> Sprite -> AffineTransform GLfloat -> IO ()
-{-# INLINE pokeSpriteOff #-}
 pokeSpriteOff ptr off Sprite{..} t =
   pokeElemOff ptr off $
   QuadAttribs
@@ -96,12 +84,10 @@ pokeSpriteOff ptr off Sprite{..} t =
   where (V2 llx lly, V2 ulx uly, V2 lrx lry, V2 urx ury) = applyFourCorners01 t
 
 bufferBytes :: Num a => a
-{-# INLINE bufferBytes #-}
 bufferBytes = 8*1024*1024
 
 -- TODO this is a pretty ugly function
 chunksToDraw :: [(Sprite, AffineTransform GLfloat)] -> [[(Int, Sprite, AffineTransform GLfloat)]]
-{-# INLINE chunksToDraw #-}
 chunksToDraw =
   groupBy (\(_,x,_) (j,y,_) -> spriteTexId x == spriteTexId y && j /= 0) .
   zipWith (\i (s, t) -> (i, s, t))
