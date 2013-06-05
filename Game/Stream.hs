@@ -9,6 +9,7 @@ import Control.Applicative
 import Control.Monad
 import Data.Bits
 import Data.List
+import Foreign.Marshal.Alloc
 import Foreign.Ptr
 import Foreign.Storable
 import Game.AffineTransform
@@ -120,11 +121,14 @@ type Uniform = GLint
 
 drawChunks :: VAO -> Program -> VBO -> Uniform -> [Chunk] -> IO ()
 drawChunks vao program vbo texUniform chunks = do
+  oldVao <- fmap fromIntegral . alloca $ \ptr -> glGetIntegerv gl_VERTEX_ARRAY_BINDING ptr >> peek ptr
   glBindVertexArray vao
   glUseProgram program
   glBindBuffer gl_ARRAY_BUFFER vbo
+  -- TODO grab the current texture unit and binding to restore later
   foldM (\ !success chunk -> (&&success) <$> drawChunk texUniform chunk) True chunks
-  -- TODO restore state
+  -- TODO restore more old state
+  glBindVertexArray oldVao
   undefined
 
 -- TODO indexed draws?
@@ -139,9 +143,9 @@ drawChunk texUniform Chunk{..} = do
       invalidateBufferBit
         | chunkOffset == 0 = gl_MAP_INVALIDATE_BUFFER_BIT
         | otherwise   = 0
-  glBindTexture gl_TEXTURE_2D chunkTexId
   glUniform1i texUniform 0
   glActiveTexture gl_TEXTURE0
+  glBindTexture gl_TEXTURE_2D chunkTexId
   ptr <- glMapBufferRange gl_ARRAY_BUFFER offsetBytes (fromIntegral rangeBytes) $
          gl_MAP_WRITE_BIT            .|.
          gl_MAP_INVALIDATE_RANGE_BIT .|.
