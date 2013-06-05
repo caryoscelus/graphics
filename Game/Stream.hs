@@ -105,8 +105,7 @@ data Chunk =
 -- which corresponds to a draw call. Every time we switch textures,
 -- that's a draw call. Every time we reach the end of the buffer,
 -- that's a draw call and a buffer orphaning.
-chunksToDraw :: [(Sprite, AffineTransform GLfloat)] ->
-                [Chunk] -- [[(Int, Sprite, AffineTransform GLfloat)]]
+chunksToDraw :: [(Sprite, AffineTransform GLfloat)] -> [Chunk]
 chunksToDraw =
   map (\xs@((i, (s, _)):_) -> Chunk i (spriteTexId s) $
                               map (uncurry spriteAttribs . snd) xs) .
