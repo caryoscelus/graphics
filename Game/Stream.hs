@@ -1,5 +1,7 @@
 {-# OPTIONS -fexpose-all-unfoldings #-}
 {-# OPTIONS -funbox-strict-fields #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ViewPatterns #-}
 module Game.Stream where
@@ -113,15 +115,17 @@ chunksToDraw =
   zip (cycle [0..bufferLen])
 
 type VBO = GLuint
+type VAO = GLuint
+type Program = GLuint
+type Uniform = GLint
 
-drawChunks :: VBO -> [[(Int, Sprite, AffineTransform GLfloat)]] -> IO ()
-drawChunks vbo chunks = do
-  -- use vao (assumed to already be set up)
-  -- set current program
-  -- bind vbo (assumed to already be allocated)
-  -- check/set framebuffer?
-  -- stream and draw!
-  -- restore state
+drawChunks :: VAO -> Program -> VBO -> Uniform -> [Chunk] -> IO ()
+drawChunks vao program vbo texUniform chunks = do
+  glBindVertexArray vao
+  glUseProgram program
+  glBindBuffer gl_ARRAY_BUFFER vbo
+  foldM (\ !success chunk -> (&&success) <$> drawChunk texUniform chunk) True chunks
+  -- TODO restore state
   undefined
 
 -- TODO indexed draws?
@@ -129,7 +133,7 @@ drawChunks vbo chunks = do
 -- | Draw the given chunk. Returns false if the draw call was skipped
 -- due to a buffer mapping error. This should be rare and temporary,
 -- so instead of trying to handle it we just report it.
-drawChunk :: GLint -> Chunk -> IO Bool
+drawChunk :: Uniform -> Chunk -> IO Bool
 drawChunk texUniform Chunk{..} = do
   let offsetBytes = fromIntegral $ chunkOffset * sizeOf (undefined :: QuadAttribs)
       rangeBytes = (bufferLen - chunkOffset) * sizeOf (undefined :: QuadAttribs)
