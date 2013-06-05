@@ -95,15 +95,23 @@ bufferBytes = 4*1024*1024
 bufferLen :: Int
 bufferLen = bufferBytes `div` sizeOf (undefined :: QuadAttribs)
 
+data Chunk =
+  Chunk { chunkOffset :: !Int
+        , chunkTexId  :: !GLuint
+        , chunkQuads  :: ![QuadAttribs]
+        }
+
 -- Given a list of sprites to draw, divide it into chunks, each of
 -- which corresponds to a draw call. Every time we switch textures,
 -- that's a draw call. Every time we reach the end of the buffer,
 -- that's a draw call and a buffer orphaning.
 chunksToDraw :: [(Sprite, AffineTransform GLfloat)] ->
-                [[(Int, Sprite, AffineTransform GLfloat)]]
+                [Chunk] -- [[(Int, Sprite, AffineTransform GLfloat)]]
 chunksToDraw =
-  groupBy (\(_,x,_) (j,y,_) -> spriteTexId x == spriteTexId y && j /= 0) .
-  zipWith (\i (s, t) -> (i, s, t)) (cycle [0..bufferLen])
+  map (\xs@((i, (s, _)):_) -> Chunk i (spriteTexId s) $
+                              map (uncurry spriteAttribs . snd) xs) .
+  groupBy (\(_,(x,_)) (j,(y,_)) -> spriteTexId x == spriteTexId y && j /= 0) .
+  zip (cycle [0..bufferLen])
 
 type VBO = GLuint
 
@@ -122,16 +130,14 @@ drawChunks vbo chunks = do
 -- | Draw the given chunk. Returns false if the draw call was skipped
 -- due to a buffer mapping error. This should be rare and temporary,
 -- so instead of trying to handle it we just report it.
-drawChunk :: GLint -> [(Int, Sprite, AffineTransform GLfloat)] -> IO Bool
-drawChunk _ [] = error "empty chunk"
-drawChunk texUniform chunk@((offset, spr, _):_) = do
-  let offsetBytes = fromIntegral $ offset * sizeOf (undefined :: QuadAttribs)
-      rangeBytes = (bufferLen - offset) * sizeOf (undefined :: QuadAttribs)
+drawChunk :: GLint -> Chunk -> IO Bool
+drawChunk texUniform Chunk{..} = do
+  let offsetBytes = fromIntegral $ chunkOffset * sizeOf (undefined :: QuadAttribs)
+      rangeBytes = (bufferLen - chunkOffset) * sizeOf (undefined :: QuadAttribs)
       invalidateBufferBit
-        | offset == 0 = gl_MAP_INVALIDATE_BUFFER_BIT
+        | chunkOffset == 0 = gl_MAP_INVALIDATE_BUFFER_BIT
         | otherwise   = 0
-      attribs = map (\(_, s, t) -> spriteAttribs s t) chunk
-  glBindTexture gl_TEXTURE_2D $ spriteTexId spr
+  glBindTexture gl_TEXTURE_2D chunkTexId
   glUniform1i texUniform 0
   glActiveTexture gl_TEXTURE0
   ptr <- glMapBufferRange gl_ARRAY_BUFFER offsetBytes (fromIntegral rangeBytes) $
@@ -140,11 +146,11 @@ drawChunk texUniform chunk@((offset, spr, _):_) = do
          gl_MAP_FLUSH_EXPLICIT_BIT   .|.
          gl_MAP_UNSYNCHRONIZED_BIT   .|.
          invalidateBufferBit
-  flushCount <- foldM (\off a -> off + 1 <$ pokeElemOff ptr off a) 0 attribs
+  flushCount <- foldM (\off a -> off + 1 <$ pokeElemOff ptr off a) 0 chunkQuads
   glFlushMappedBufferRange gl_ARRAY_BUFFER 0 . fromIntegral $
     flushCount * sizeOf (undefined :: Attribs)
   unmapSuccess <- glUnmapBuffer gl_ARRAY_BUFFER
   let shouldDraw = unmapSuccess == fromIntegral gl_TRUE
-  when shouldDraw . glDrawArrays gl_TRIANGLES (fromIntegral offset) $
+  when shouldDraw . glDrawArrays gl_TRIANGLES (fromIntegral chunkOffset) $
     fromIntegral flushCount
   return shouldDraw
