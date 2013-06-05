@@ -1,4 +1,5 @@
 {-# OPTIONS -fexpose-all-unfoldings #-}
+{-# OPTIONS -funbox-strict-fields #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ViewPatterns #-}
 module Game.Stream where
@@ -13,10 +14,10 @@ import Graphics.Rendering.OpenGL.Raw.Core31
 import Linear.V2
 
 data Attribs =
-  Attribs { xPos :: {-# UNPACK #-} !GLfloat
-          , yPos :: {-# UNPACK #-} !GLfloat
-          , xTex :: {-# UNPACK #-} !GLfloat
-          , yTex :: {-# UNPACK #-} !GLfloat
+  Attribs { xPos :: !GLfloat
+          , yPos :: !GLfloat
+          , xTex :: !GLfloat
+          , yTex :: !GLfloat
           }
 
 instance Storable Attribs where
@@ -35,9 +36,9 @@ instance Storable Attribs where
     pokeElemOff ptr (off+3) yTex
 
 data TriangleAttribs =
-  TriangleAttribs { corner1 :: {-# UNPACK #-} !Attribs
-                  , corner2 :: {-# UNPACK #-} !Attribs
-                  , corner3 :: {-# UNPACK #-} !Attribs
+  TriangleAttribs { corner1 :: !Attribs
+                  , corner2 :: !Attribs
+                  , corner3 :: !Attribs
                   }
 
 instance Storable TriangleAttribs where
@@ -54,8 +55,8 @@ instance Storable TriangleAttribs where
     pokeElemOff ptr (off+2) corner3 
 
 data QuadAttribs =
-  QuadAttribs { upperLeft  :: {-# UNPACK #-} !TriangleAttribs
-              , lowerRight :: {-# UNPACK #-} !TriangleAttribs
+  QuadAttribs { upperLeft  :: !TriangleAttribs
+              , lowerRight :: !TriangleAttribs
               }
 
 instance Storable QuadAttribs where

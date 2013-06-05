@@ -1,3 +1,4 @@
+{-# OPTIONS -funbox-strict-fields #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 module Game.Sprite (Texture (), Sprite (..), texture, sprite) where
 
@@ -14,16 +15,16 @@ import Linear.V2
 import qualified Data.Vector.Storable as Vector
 
 data Texture =
-  Texture { texId     :: {-# UNPACK #-} !GLuint
-          , texSize   :: {-# UNPACK #-} !(V2 Word)
+  Texture { texId     :: !GLuint
+          , texSize   :: !(V2 Word)
           }
 
 data Sprite =
-  Sprite { spriteTexId  :: {-# UNPACK #-} !GLuint
-         , spriteTop    :: {-# UNPACK #-} !GLfloat
-         , spriteRight  :: {-# UNPACK #-} !GLfloat
-         , spriteBottom :: {-# UNPACK #-} !GLfloat
-         , spriteLeft   :: {-# UNPACK #-} !GLfloat
+  Sprite { spriteTexId  :: !GLuint
+         , spriteTop    :: !GLfloat
+         , spriteRight  :: !GLfloat
+         , spriteBottom :: !GLfloat
+         , spriteLeft   :: !GLfloat
          }
 
 -- TODO add support for custom mipmaps, or write a high quality
