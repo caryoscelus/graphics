@@ -1,19 +1,30 @@
 {-# OPTIONS -fexpose-all-unfoldings #-}
+{-# OPTIONS -funbox-strict-fields #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ImplicitParams #-}
-module Game.Graphics where
-
+module Game.Graphics
+       ( Space ()
+       , transform, translate, rotate, scale, shear, reflect
+       , Texture (), Sprite (), texture, sprite
+       , GraphicsState (), draw
+       ) where
+--------------------------------------------------------------------------------
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Fix
 import Control.Monad.Trans.Writer
 import Data.Foldable
 import Data.Traversable
+import Graphics.Rendering.OpenGL.Raw.Core31 (GLfloat, GLuint)
 import Linear.V2
 
-import Game.AffineTransform as Transform
+import Game.AffineTransform (AffineTransform)
+import qualified Game.AffineTransform as Transform
+import Game.Sprite
+import Game.Stream
 
 -- TODO Some sort of DList-like monad instead of []
 -- TODO A more specialized WriterT (maybe the whole thing should just be specialized)
@@ -44,3 +55,12 @@ shear = transform . Transform.shear
 
 reflect :: Num c => V2 c -> Space c ()
 reflect = transform . Transform.reflect
+
+data GraphicsState =
+  GraphicsState { vbo     :: !GLuint
+                , vao     :: !GLuint
+                , program :: !GLuint
+                }
+
+draw :: GraphicsState -> Space GLfloat Sprite -> IO Bool
+draw GraphicsState{..} = drawChunks vao program vbo . chunksToDraw . runSpace

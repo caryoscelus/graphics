@@ -25,9 +25,8 @@ library
                      transformers == 0.3.*,
                      vector == 0.10.*
   default-language:  Haskell2010
-  exposed-modules:   Game.Graphics,
-                     -- totally the wrong place
-                     Game.AffineTransform,
-                     Game.Sprite,
+  exposed-modules:   Game.AffineTransform,
+                     Game.Graphics
+  other-modules:     Game.Sprite,
                      Game.Stream
   ghc-options:       -Wall

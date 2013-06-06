@@ -1,5 +1,12 @@
 {-# OPTIONS -fexpose-all-unfoldings #-}
-module Game.AffineTransform where
+module Game.AffineTransform
+       ( AffineTransform ()
+       , translate , rotate , scale , shear , reflect , invert, apply
+       , applyFourCorners01
+       ) where
+
+-- TODO applyFourCorners01 may be fairly implementation-revealing and
+-- should probably be hidden somehow (an Internal module?)
 
 import Control.Applicative
 import Data.Monoid
@@ -8,12 +15,13 @@ import Linear.Matrix
 import Linear.V2
 import Linear.V3
 
--- CR jmcarthur: We could use a more efficient representation. The
--- bottom row can probably be left off. It would just require some
--- more manual work to implement all the operations. Eventually, I
--- want to actually do this.
+-- TODO We could use a more efficient representation. The bottom row
+-- can probably be left off. It would just require some more manual
+-- work to implement all the operations. Eventually, I want to
+-- actually do this.
 
--- CR jmcarthur: Moar instances.
+-- TODO Moar instances.
+
 newtype AffineTransform a = AffineTransform (V3 (V3 a)) deriving Show
 
 instance Num a => Monoid (AffineTransform a) where

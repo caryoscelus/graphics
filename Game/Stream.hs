@@ -3,7 +3,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ViewPatterns #-}
-module Game.Stream where
+module Game.Stream (chunksToDraw, drawChunks) where
 
 import Control.Applicative
 import Control.Monad
@@ -122,7 +122,7 @@ glGet :: Num a => GLenum -> IO a
 glGet target =
   fmap fromIntegral . alloca $ \ptr -> glGetIntegerv target ptr >> peek ptr
 
-drawChunks :: VAO -> Program -> VBO -> [Chunk] -> IO ()
+drawChunks :: VAO -> Program -> VBO -> [Chunk] -> IO Bool
 drawChunks vao program vbo chunks = do
   oldVao <- glGet gl_VERTEX_ARRAY_BINDING
   glBindVertexArray vao
@@ -138,12 +138,14 @@ drawChunks vao program vbo chunks = do
   oldTex2D <- glGet gl_TEXTURE_BINDING_2D
   glBindBuffer gl_ARRAY_BUFFER vbo
 
-  foldM (\ !success chunk -> (&&success) <$> drawChunk chunk) True chunks
+  drewCleanly <- foldM (\ !success chunk -> (&&success) <$> drawChunk chunk) True chunks
 
   glBindTexture gl_TEXTURE_2D oldTex2D
   glActiveTexture oldTexUnit
   glUseProgram oldProgram
   glBindVertexArray oldVao
+
+  return drewCleanly
 
 -- TODO indexed draws?
 
