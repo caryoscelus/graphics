@@ -119,7 +119,8 @@ type VAO = GLuint
 type Program = GLuint
 
 glGet :: Num a => GLenum -> IO a
-glGet target = fmap fromIntegral . alloca $ \ptr -> glGetIntegerv target ptr >> peek ptr
+glGet target =
+  fmap fromIntegral . alloca $ \ptr -> glGetIntegerv target ptr >> peek ptr
 
 drawChunks :: VAO -> Program -> VBO -> [Chunk] -> IO ()
 drawChunks vao program vbo chunks = do
@@ -155,7 +156,7 @@ drawChunk Chunk{..} = do
       rangeBytes = (bufferLen - chunkOffset) * sizeOf (undefined :: QuadAttribs)
       invalidateBufferBit
         | chunkOffset == 0 = gl_MAP_INVALIDATE_BUFFER_BIT
-        | otherwise   = 0
+        | otherwise        = 0
   glBindTexture gl_TEXTURE_2D chunkTexId
   ptr <- glMapBufferRange gl_ARRAY_BUFFER offsetBytes (fromIntegral rangeBytes) $
          gl_MAP_WRITE_BIT            .|.
