@@ -117,34 +117,45 @@ chunksToDraw =
 type VBO = GLuint
 type VAO = GLuint
 type Program = GLuint
-type Uniform = GLint
 
-drawChunks :: VAO -> Program -> VBO -> Uniform -> [Chunk] -> IO ()
-drawChunks vao program vbo texUniform chunks = do
-  oldVao <- fmap fromIntegral . alloca $ \ptr -> glGetIntegerv gl_VERTEX_ARRAY_BINDING ptr >> peek ptr
+glGet :: Num a => GLenum -> IO a
+glGet target = fmap fromIntegral . alloca $ \ptr -> glGetIntegerv target ptr >> peek ptr
+
+drawChunks :: VAO -> Program -> VBO -> [Chunk] -> IO ()
+drawChunks vao program vbo chunks = do
+  oldVao <- glGet gl_VERTEX_ARRAY_BINDING
   glBindVertexArray vao
+
+  -- assume that the uniform for the sampler is already set (it will
+  -- be the same value every time anyway)
+  oldProgram <- glGet gl_CURRENT_PROGRAM
   glUseProgram program
+
+  oldTexUnit <- glGet gl_ACTIVE_TEXTURE
+  glActiveTexture gl_TEXTURE0
+
+  oldTex2D <- glGet gl_TEXTURE_BINDING_2D
   glBindBuffer gl_ARRAY_BUFFER vbo
-  -- TODO grab the current texture unit and binding to restore later
-  foldM (\ !success chunk -> (&&success) <$> drawChunk texUniform chunk) True chunks
-  -- TODO restore more old state
+
+  foldM (\ !success chunk -> (&&success) <$> drawChunk chunk) True chunks
+
+  glBindTexture gl_TEXTURE_2D oldTex2D
+  glActiveTexture oldTexUnit
+  glUseProgram oldProgram
   glBindVertexArray oldVao
-  undefined
 
 -- TODO indexed draws?
 
 -- | Draw the given chunk. Returns false if the draw call was skipped
 -- due to a buffer mapping error. This should be rare and temporary,
 -- so instead of trying to handle it we just report it.
-drawChunk :: Uniform -> Chunk -> IO Bool
-drawChunk texUniform Chunk{..} = do
+drawChunk :: Chunk -> IO Bool
+drawChunk Chunk{..} = do
   let offsetBytes = fromIntegral $ chunkOffset * sizeOf (undefined :: QuadAttribs)
       rangeBytes = (bufferLen - chunkOffset) * sizeOf (undefined :: QuadAttribs)
       invalidateBufferBit
         | chunkOffset == 0 = gl_MAP_INVALIDATE_BUFFER_BIT
         | otherwise   = 0
-  glUniform1i texUniform 0
-  glActiveTexture gl_TEXTURE0
   glBindTexture gl_TEXTURE_2D chunkTexId
   ptr <- glMapBufferRange gl_ARRAY_BUFFER offsetBytes (fromIntegral rangeBytes) $
          gl_MAP_WRITE_BIT            .|.
