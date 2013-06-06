@@ -29,4 +29,9 @@ library
                      Game.Graphics
   other-modules:     Game.Sprite,
                      Game.Stream
-  ghc-options:       -Wall
+  ghc-options:       -O2 -fllvm -Wall
+  other-extensions:  BangPatterns,
+                     FlexibleContexts,
+                     GeneralizedNewtypeDeriving
+                     RecordWildCards,
+                     ViewPatterns

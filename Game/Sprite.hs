@@ -1,5 +1,5 @@
 {-# OPTIONS -funbox-strict-fields #-}
-{-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Game.Sprite (Texture (), Sprite (..), texture, sprite) where
 
 -- TODO control export better
@@ -9,6 +9,7 @@ import Codec.Picture.Types
 import Control.Applicative
 import Data.Word
 import Foreign.Marshal.Alloc
+import Foreign.Ptr
 import Foreign.Storable
 import Graphics.Rendering.OpenGL.Raw.Core32
 import Linear.V2
@@ -50,12 +51,14 @@ texture dynImg = do
   glGenerateMipmap gl_TEXTURE_2D
   glBindTexture gl_TEXTURE_2D origTid
   return $! Texture tid $ V2 w h
-  where texImage2D internal format type_ img = do
+  where texImage2D :: Storable (PixelBaseComponent b) => GLenum -> GLenum -> GLenum -> Image b -> IO (Word, Word)
+        texImage2D internal format type_ img = do
           let w = imageWidth img
               h = imageHeight img
           unsafeWith img $ glTexImage2D gl_TEXTURE_2D 0 (fromIntegral internal)
             (fromIntegral w) (fromIntegral h) 0 format type_
           return $! (fromIntegral w, fromIntegral h)
+        unsafeWith :: Storable (PixelBaseComponent a) => Image a -> (Ptr (PixelBaseComponent a) -> IO b) -> IO b
         unsafeWith = Vector.unsafeWith . imageData
 
 -- | @sprite top right bottom left texture@ creates a sprite from a texture

@@ -1,17 +1,14 @@
 {-# OPTIONS -fexpose-all-unfoldings #-}
 {-# OPTIONS -funbox-strict-fields #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ImplicitParams #-}
 module Game.Graphics
        ( Space ()
        , transform, translate, rotate, scale, shear, reflect
        , Texture (), Sprite (), texture, sprite
        , GraphicsState (), draw
        ) where
---------------------------------------------------------------------------------
+
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Fix
