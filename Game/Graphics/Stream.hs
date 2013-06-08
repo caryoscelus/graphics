@@ -142,7 +142,7 @@ drawChunks vao program vbo chunks =
 drawChunk :: Chunk -> IO Bool
 drawChunk Chunk{..} = do
   let offsetBytes = fromIntegral $ chunkOffset * sizeOf (undefined :: QuadAttribs)
-      rangeBytes = (bufferLen - chunkOffset) * sizeOf (undefined :: QuadAttribs)
+      rangeBytes = (bufferLen - chunkOffset)   * sizeOf (undefined :: QuadAttribs)
       invalidateBufferBit
         | chunkOffset == 0 = gl_MAP_INVALIDATE_BUFFER_BIT
         | otherwise        = 0

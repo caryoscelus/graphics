@@ -20,6 +20,9 @@ data Texture =
           , texSize   :: !(V2 Word)
           }
 
+-- TODO Make a Polygon type, and make sprites just be a special case
+-- of it.
+
 data Sprite =
   Sprite { spriteTexId  :: !GLuint
          , spriteTop    :: !GLfloat
@@ -33,6 +36,8 @@ data Sprite =
 
 -- TODO add support for using texture arrays automatically on machines
 -- that support them
+
+-- TODO use premultiplied alpha for more better blending
 
 -- | Create a texture from an image loaded using JuicyPixels.
 texture :: DynamicImage -> IO Texture
