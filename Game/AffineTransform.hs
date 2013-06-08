@@ -74,7 +74,7 @@ apply (AffineTransform a) (V2 x y) =
   let V3 x' y' _ = a !* V3 x y 1
   in V2 x' y'
 
--- | [[applyFourCorners01 a]] = (apply a (0,0), apply a (0,1), apply a (1,0), apply a (1,1))
+-- | @[[applyFourCorners01 a]] = (apply a (0,0), apply a (0,1), apply a (1,0), apply a (1,1))@
 applyFourCorners01 :: (Num a, Eq a) => AffineTransform a -> (V2 a, V2 a, V2 a, V2 a)
 applyFourCorners01 (AffineTransform (V3 (V3 a11 a12 a13)
                                         (V3 a21 a22 a23)
