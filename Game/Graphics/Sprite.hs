@@ -8,9 +8,9 @@ import Codec.Picture
 import Codec.Picture.Types
 import Control.Applicative
 import Data.Word
-import Foreign.Marshal.Alloc
 import Foreign.Ptr
 import Foreign.Storable
+import Game.Graphics.Utils
 import Graphics.Rendering.OpenGL.Raw.Core32
 import Linear.V2
 import qualified Data.Vector.Storable as Vector
@@ -37,8 +37,8 @@ data Sprite =
 -- | Create a texture from an image loaded using JuicyPixels.
 texture :: DynamicImage -> IO Texture
 texture dynImg = do
-  origTid <- fmap fromIntegral . alloca $ \ptr -> glGetIntegerv gl_TEXTURE_BINDING_2D ptr >> peek ptr
-  tid <- alloca $ \ptr -> glGenTextures 1 ptr >> peek ptr
+  origTid <- glGet gl_TEXTURE_BINDING_2D
+  tid <- glGen glGenTextures
   glBindTexture gl_TEXTURE_2D tid
   (w, h) <- case dynImg of
     ImageY8     img -> texImage2D gl_SRGB8        gl_RED  gl_UNSIGNED_BYTE img

@@ -6,7 +6,7 @@ module Game.Graphics
        ( Space ()
        , transform, translate, rotate, scale, shear, reflect
        , Texture (), Sprite (), texture, sprite
-       , GraphicsState (), draw
+       , GraphicsState (), initializeGraphics, draw
        ) where
 
 import Control.Applicative
@@ -15,16 +15,19 @@ import Control.Monad.Fix
 import Control.Monad.Trans.Writer
 import Data.Foldable
 import Data.Traversable
-import Graphics.Rendering.OpenGL.Raw.Core31 (GLfloat, GLuint)
-import Linear.V2
-
 import Game.Graphics.AffineTransform (AffineTransform)
 import qualified Game.Graphics.AffineTransform as Transform
 import Game.Graphics.Sprite
-import Game.Graphics.Stream
+import qualified Game.Graphics.Stream as Stream
+import Game.Graphics.Stream (GraphicsState, initializeGraphics)
+import Graphics.Rendering.OpenGL.Raw.Core31
+import Linear.V2
 
--- TODO Some sort of DList-like monad instead of []
--- TODO A more specialized WriterT (maybe the whole thing should just be specialized)
+-- TODO Some sort of DList-like monad instead of [], also maybe a
+-- transformer (although both of these would complicate the rendering
+-- code, it might still be a good idea)?
+-- TODO A more specialized WriterT (maybe the whole thing should just
+-- be specialized)
 newtype Space c a = Space { unSpace :: WriterT (AffineTransform c) [] a }
                   deriving ( Functor, Applicative, Monad, Alternative
                            , MonadPlus, MonadFix, Foldable, Traversable
@@ -53,11 +56,5 @@ shear = transform . Transform.shear
 reflect :: Num c => V2 c -> Space c ()
 reflect = transform . Transform.reflect
 
-data GraphicsState =
-  GraphicsState { vbo     :: !GLuint
-                , vao     :: !GLuint
-                , program :: !GLuint
-                }
-
 draw :: GraphicsState -> Space GLfloat Sprite -> IO Bool
-draw GraphicsState{..} = drawChunks vao program vbo . chunksToDraw . runSpace
+draw gs = Stream.draw gs . runSpace

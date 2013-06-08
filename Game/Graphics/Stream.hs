@@ -2,43 +2,40 @@
 {-# OPTIONS -funbox-strict-fields #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ViewPatterns #-}
-module Game.Graphics.Stream (chunksToDraw, drawChunks) where
+module Game.Graphics.Stream (GraphicsState (), initializeGraphics, GLfloat, draw) where
 
 import Control.Applicative
 import Control.Monad
 import Data.Bits
+import Data.ByteString (ByteString, useAsCString)
 import Data.List
-import Foreign.Marshal.Alloc
 import Foreign.Ptr
 import Foreign.Storable
 import Game.Graphics.AffineTransform
+import Game.Graphics.Shader
 import Game.Graphics.Sprite
+import Game.Graphics.Utils
 import Graphics.Rendering.OpenGL.Raw.Core31
 import Linear.V2
 
 -- Attributes for a single vertex
 data Attribs =
-  Attribs { xPos :: !GLfloat
-          , yPos :: !GLfloat
-          , xTex :: !GLfloat
-          , yTex :: !GLfloat
+  Attribs { attribsPos :: !(V2 GLfloat)
+          , attribsTex :: !(V2 GLfloat)
           }
 
 instance Storable Attribs where
-  sizeOf    _ = sizeOf    (undefined :: GLfloat) * 4
-  alignment _ = alignment (undefined :: GLfloat)
+  sizeOf    _ = sizeOf    (undefined :: V2 GLfloat) * 2
+  alignment _ = alignment (undefined :: V2 GLfloat)
   peekElemOff (castPtr -> ptr) off =
     Attribs                 <$>
     peekElemOff ptr  off    <*>
-    peekElemOff ptr (off+1) <*>
-    peekElemOff ptr (off+2) <*>
-    peekElemOff ptr (off+3)
+    peekElemOff ptr (off+1)
   pokeElemOff (castPtr -> ptr) off Attribs{..} = do
-    pokeElemOff ptr  off    xPos
-    pokeElemOff ptr (off+1) yPos
-    pokeElemOff ptr (off+2) xTex
-    pokeElemOff ptr (off+3) yTex
+    pokeElemOff ptr  off    attribsPos
+    pokeElemOff ptr (off+1) attribsTex
 
 -- Attributes for a triangle (the corners must be in clockwise order)
 data TriangleAttribs =
@@ -82,14 +79,14 @@ spriteAttribs :: Sprite -> AffineTransform GLfloat -> QuadAttribs
 spriteAttribs Sprite{..} t =
   QuadAttribs
   (TriangleAttribs
-   (Attribs ulx uly spriteLeft  spriteTop)
-   (Attribs urx ury spriteRight spriteTop)
-   (Attribs llx lly spriteLeft  spriteBottom))
+   (Attribs ul $ V2 spriteLeft  spriteTop)
+   (Attribs ur $ V2 spriteRight spriteTop)
+   (Attribs ll $ V2 spriteLeft  spriteBottom))
   (TriangleAttribs
-   (Attribs urx ury spriteRight spriteTop)
-   (Attribs lrx lry spriteRight spriteBottom)
-   (Attribs llx lly spriteLeft  spriteBottom))
-  where (V2 llx lly, V2 ulx uly, V2 lrx lry, V2 urx ury) = applyFourCorners01 t
+   (Attribs ur $ V2 spriteRight spriteTop)
+   (Attribs lr $ V2 spriteRight spriteBottom)
+   (Attribs ll $ V2 spriteLeft  spriteBottom))
+  where (ll, ul, lr, ur) = applyFourCorners01 t
 
 bufferBytes :: Num a => a
 bufferBytes = 4*1024*1024
@@ -118,34 +115,24 @@ type VBO = GLuint
 type VAO = GLuint
 type Program = GLuint
 
-glGet :: Num a => GLenum -> IO a
-glGet target =
-  fmap fromIntegral . alloca $ \ptr -> glGetIntegerv target ptr >> peek ptr
-
 drawChunks :: VAO -> Program -> VBO -> [Chunk] -> IO Bool
-drawChunks vao program vbo chunks = do
-  oldVao <- glGet gl_VERTEX_ARRAY_BINDING
-  glBindVertexArray vao
-
-  -- assume that the uniform for the sampler is already set (it will
-  -- be the same value every time anyway)
-  oldProgram <- glGet gl_CURRENT_PROGRAM
-  glUseProgram program
-
-  oldTexUnit <- glGet gl_ACTIVE_TEXTURE
-  glActiveTexture gl_TEXTURE0
-
-  oldTex2D <- glGet gl_TEXTURE_BINDING_2D
-  glBindBuffer gl_ARRAY_BUFFER vbo
-
-  drewCleanly <- foldM (\ !success chunk -> (&&success) <$> drawChunk chunk) True chunks
-
-  glBindTexture gl_TEXTURE_2D oldTex2D
-  glActiveTexture oldTexUnit
-  glUseProgram oldProgram
-  glBindVertexArray oldVao
-
-  return drewCleanly
+drawChunks vao program vbo chunks =
+  saveAndRestore gl_VERTEX_ARRAY_BINDING glBindVertexArray .
+  saveAndRestore gl_CURRENT_PROGRAM glUseProgram .
+  saveAndRestore gl_ACTIVE_TEXTURE glActiveTexture .
+  saveAndRestore gl_TEXTURE_2D (glBindTexture gl_TEXTURE_2D) .
+  saveAndRestore gl_ARRAY_BUFFER_BINDING (glBindBuffer gl_ARRAY_BUFFER) $ do
+    glBindVertexArray vao
+    glUseProgram program -- assume that the uniform for the sampler is already set
+    glActiveTexture gl_TEXTURE0
+    glBindBuffer gl_ARRAY_BUFFER vbo
+    srgbWasEnabled <- (== fromIntegral gl_TRUE) <$>
+                      glIsEnabled gl_FRAMEBUFFER_SRGB
+    unless srgbWasEnabled $ glEnable gl_FRAMEBUFFER_SRGB
+    drewCleanly <- foldM (\ !success chunk -> (&&success) <$> drawChunk chunk)
+                   True chunks
+    unless srgbWasEnabled $ glDisable gl_FRAMEBUFFER_SRGB  
+    return drewCleanly
 
 -- TODO indexed draws?
 
@@ -174,3 +161,73 @@ drawChunk Chunk{..} = do
   when shouldDraw . glDrawArrays gl_TRIANGLES (fromIntegral chunkOffset) $
     fromIntegral flushCount
   return shouldDraw
+
+data GraphicsState =
+  GraphicsState { vbo     :: !GLuint
+                , vao     :: !GLuint
+                , program :: !GLuint
+                }
+
+vShader :: ByteString
+vShader =
+  "#version 110\n\
+
+  \attribute vec2 position;\
+  \attribute vec2 texPosition;\
+
+  \varying vec2 texcoord;\
+
+  \void main()\
+  \{\
+  \  gl_Position = vec4(position, 0.0, 1.0);\
+  \  texcoord = texPosition;\
+  \}"
+
+fShader :: ByteString
+fShader =
+  "#version 110\n\
+
+  \uniform sampler2D tex;\
+
+  \varying vec2 texcoord;\
+
+  \void main()\
+  \{\
+  \  gl_FragColor = texture2D(texture, texcoord);\
+  \}"
+
+initializeGraphics :: IO GraphicsState
+initializeGraphics =
+  saveAndRestore gl_VERTEX_ARRAY_BINDING glBindVertexArray .
+  saveAndRestore gl_ARRAY_BUFFER_BINDING (glBindBuffer gl_ARRAY_BUFFER_BINDING) $ do
+    vao <- glGen glGenVertexArrays
+    vbo <- glGen glGenBuffers
+
+    glBindVertexArray vao  
+    glBindBuffer gl_ARRAY_BUFFER vbo
+    glBufferData gl_ARRAY_BUFFER bufferBytes nullPtr gl_STREAM_DRAW
+
+    vs <- compileShader vShader gl_VERTEX_SHADER
+    fs <- compileShader fShader gl_FRAGMENT_SHADER
+    prog <- linkProgram vs fs
+
+    texUID <- useAsCString "tex" $ glGetUniformLocation prog . castPtr
+    glUniform1i texUID 0
+
+    vPosition <- fmap fromIntegral . useAsCString "position" $
+                 glGetAttribLocation prog . castPtr
+    vTexPosition <- fmap fromIntegral . useAsCString "texPosition" $
+                    glGetAttribLocation prog . castPtr
+
+    glVertexAttribPointer vPosition 2 gl_FLOAT (fromIntegral gl_FALSE)
+      (fromIntegral $ sizeOf (undefined :: Attribs)) $ intPtrToPtr 0
+    glVertexAttribPointer vTexPosition 2 gl_FLOAT (fromIntegral gl_FALSE)
+      (fromIntegral $ sizeOf (undefined :: Attribs)) . intPtrToPtr .
+      fromIntegral $ sizeOf (undefined :: V2 GLfloat)
+    glEnableVertexAttribArray vPosition
+    glEnableVertexAttribArray vTexPosition
+
+    return $! GraphicsState vbo vao prog
+
+draw :: GraphicsState -> [(Sprite, AffineTransform GLfloat)] -> IO Bool
+draw GraphicsState{..} = drawChunks vao program vbo . chunksToDraw
