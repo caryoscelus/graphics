@@ -3,7 +3,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ViewPatterns #-}
-module Game.Stream (chunksToDraw, drawChunks) where
+module Game.Graphics.Stream (chunksToDraw, drawChunks) where
 
 import Control.Applicative
 import Control.Monad
@@ -12,8 +12,8 @@ import Data.List
 import Foreign.Marshal.Alloc
 import Foreign.Ptr
 import Foreign.Storable
-import Game.AffineTransform
-import Game.Sprite
+import Game.Graphics.AffineTransform
+import Game.Graphics.Sprite
 import Graphics.Rendering.OpenGL.Raw.Core31
 import Linear.V2
 

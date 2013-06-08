@@ -1,6 +1,6 @@
 {-# OPTIONS -funbox-strict-fields #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Game.Sprite (Texture (), Sprite (..), texture, sprite) where
+module Game.Graphics.Sprite (Texture (), Sprite (..), texture, sprite) where
 
 -- TODO control export better
 

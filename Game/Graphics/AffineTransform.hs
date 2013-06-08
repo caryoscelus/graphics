@@ -1,5 +1,5 @@
 {-# OPTIONS -fexpose-all-unfoldings #-}
-module Game.AffineTransform
+module Game.Graphics.AffineTransform
        ( AffineTransform ()
        , translate , rotate , scale , shear , reflect , invert, apply
        , applyFourCorners01

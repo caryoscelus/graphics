@@ -18,10 +18,10 @@ import Data.Traversable
 import Graphics.Rendering.OpenGL.Raw.Core31 (GLfloat, GLuint)
 import Linear.V2
 
-import Game.AffineTransform (AffineTransform)
-import qualified Game.AffineTransform as Transform
-import Game.Sprite
-import Game.Stream
+import Game.Graphics.AffineTransform (AffineTransform)
+import qualified Game.Graphics.AffineTransform as Transform
+import Game.Graphics.Sprite
+import Game.Graphics.Stream
 
 -- TODO Some sort of DList-like monad instead of []
 -- TODO A more specialized WriterT (maybe the whole thing should just be specialized)
