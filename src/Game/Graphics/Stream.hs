@@ -24,68 +24,59 @@ import Linear.V2
 data Attribs =
   Attribs { attribsPos :: !(V2 GLfloat)
           , attribsTex :: !(V2 GLfloat)
-          }
+          } deriving Show
 
 instance Storable Attribs where
   sizeOf    _ = sizeOf    (undefined :: V2 GLfloat) * 2
   alignment _ = alignment (undefined :: V2 GLfloat)
-  peekElemOff (castPtr -> ptr) off =
-    Attribs                 <$>
-    peekElemOff ptr  off    <*>
-    peekElemOff ptr (off+1)
-  pokeElemOff (castPtr -> ptr) off Attribs{..} = do
-    pokeElemOff ptr  off    attribsPos
-    pokeElemOff ptr (off+1) attribsTex
+  peek (castPtr -> ptr) = liftA2 Attribs (peek ptr) (peekElemOff ptr 1)
+  poke (castPtr -> ptr) Attribs{..} =
+    poke ptr attribsPos >> pokeElemOff ptr 1 attribsTex
 
--- Attributes for a triangle (the corners must be in clockwise order)
+-- Attributes for a triangle (the corners must be in counterclockwise
+-- order)
 data TriangleAttribs =
   TriangleAttribs { corner1 :: !Attribs
                   , corner2 :: !Attribs
                   , corner3 :: !Attribs
-                  }
+                  } deriving Show
 
+-- BUG something is wrong. peek and poke don't agree for some reason
 instance Storable TriangleAttribs where
   sizeOf    _ = sizeOf    (undefined :: Attribs) * 3
   alignment _ = alignment (undefined :: Attribs)
-  peekElemOff (castPtr -> ptr) off =
-    TriangleAttribs         <$>
-    peekElemOff ptr  off    <*>
-    peekElemOff ptr (off+1) <*>
-    peekElemOff ptr (off+2)
-  pokeElemOff (castPtr -> ptr) off TriangleAttribs{..} = do
-    pokeElemOff ptr  off    corner1
-    pokeElemOff ptr (off+1) corner2
-    pokeElemOff ptr (off+2) corner3 
+  peek (castPtr -> ptr) =
+    liftA3 TriangleAttribs (peek ptr) (peekElemOff ptr 1) (peekElemOff ptr 2)
+  poke (castPtr -> ptr) TriangleAttribs{..} = do
+    poke ptr corner1
+    pokeElemOff ptr 1 corner2
+    pokeElemOff ptr 2 corner3
 
 -- Attributes for a quad. Implemented as two triangles with some
 -- redundancy.
 data QuadAttribs =
   QuadAttribs { upperLeft  :: !TriangleAttribs
               , lowerRight :: !TriangleAttribs
-              }
+              } deriving Show
 
 instance Storable QuadAttribs where
-  sizeOf    _ = sizeOf    (undefined :: TriangleAttribs) * 3
+  sizeOf    _ = sizeOf    (undefined :: TriangleAttribs) * 2
   alignment _ = alignment (undefined :: TriangleAttribs)
-  peekElemOff (castPtr -> ptr) off =
-    QuadAttribs             <$>
-    peekElemOff ptr  off    <*>
-    peekElemOff ptr (off+1)
-  pokeElemOff (castPtr -> ptr) off QuadAttribs{..} = do
-    pokeElemOff ptr  off    upperLeft
-    pokeElemOff ptr (off+1) lowerRight
+  peek (castPtr -> ptr) = liftA2 QuadAttribs (peek ptr) (peekElemOff ptr 1)
+  poke (castPtr -> ptr) QuadAttribs{..} =
+    poke ptr upperLeft >> pokeElemOff ptr 1 lowerRight
 
 spriteAttribs :: Sprite -> AffineTransform GLfloat -> QuadAttribs
 spriteAttribs Sprite{..} t =
   QuadAttribs
-  (TriangleAttribs
-   (Attribs ul $ V2 spriteLeft  spriteTop)
+  (TriangleAttribs 
+   (Attribs ll $ V2 spriteLeft  spriteBottom)
    (Attribs ur $ V2 spriteRight spriteTop)
-   (Attribs ll $ V2 spriteLeft  spriteBottom))
+   (Attribs ul $ V2 spriteLeft  spriteTop))
   (TriangleAttribs
-   (Attribs ur $ V2 spriteRight spriteTop)
+   (Attribs ll $ V2 spriteLeft  spriteBottom)
    (Attribs lr $ V2 spriteRight spriteBottom)
-   (Attribs ll $ V2 spriteLeft  spriteBottom))
+   (Attribs ur $ V2 spriteRight spriteTop))
   where (ll, ul, lr, ur) = applyFourCorners01 t
 
 bufferBytes :: Num a => a
@@ -98,7 +89,7 @@ data Chunk =
   Chunk { chunkOffset :: !Int
         , chunkTexId  :: !GLuint
         , chunkQuads  :: ![QuadAttribs]
-        }
+        } deriving Show
 
 -- Given a list of sprites to draw, divide it into chunks, each of
 -- which corresponds to a draw call. Every time we switch textures,
@@ -115,13 +106,14 @@ type VBO = GLuint
 type VAO = GLuint
 type Program = GLuint
 
+-- TODO restore the blend function
 drawChunks :: VAO -> Program -> VBO -> [Chunk] -> IO Bool
 drawChunks vao program vbo chunks =
   saveAndRestore gl_VERTEX_ARRAY_BINDING glBindVertexArray .
   saveAndRestore gl_CURRENT_PROGRAM glUseProgram .
   saveAndRestore gl_ACTIVE_TEXTURE glActiveTexture .
   saveAndRestore gl_TEXTURE_2D (glBindTexture gl_TEXTURE_2D) .
-  saveAndRestore gl_ARRAY_BUFFER_BINDING (glBindBuffer gl_ARRAY_BUFFER) $ do
+  saveAndRestoreUnless (==0) gl_ARRAY_BUFFER_BINDING (glBindBuffer gl_ARRAY_BUFFER) $ do
     glBindVertexArray vao
     glUseProgram program -- assume that the uniform for the sampler is already set
     glActiveTexture gl_TEXTURE0
@@ -129,6 +121,10 @@ drawChunks vao program vbo chunks =
     srgbWasEnabled <- (== fromIntegral gl_TRUE) <$>
                       glIsEnabled gl_FRAMEBUFFER_SRGB
     unless srgbWasEnabled $ glEnable gl_FRAMEBUFFER_SRGB
+
+    glBlendFunc gl_SRC_ALPHA gl_ONE_MINUS_SRC_ALPHA
+    glEnable gl_BLEND
+    
     drewCleanly <- foldM (\ !success chunk -> (&&success) <$> drawChunk chunk)
                    True chunks
     unless srgbWasEnabled $ glDisable gl_FRAMEBUFFER_SRGB  
@@ -153,13 +149,13 @@ drawChunk Chunk{..} = do
          gl_MAP_FLUSH_EXPLICIT_BIT   .|.
          gl_MAP_UNSYNCHRONIZED_BIT   .|.
          invalidateBufferBit
-  flushCount <- foldM (\off a -> off + 1 <$ pokeElemOff ptr off a) 0 chunkQuads
+  flushCount <- foldM (\off quad -> off + 1 <$ pokeElemOff ptr off quad) 0 chunkQuads
   glFlushMappedBufferRange gl_ARRAY_BUFFER 0 . fromIntegral $
-    flushCount * sizeOf (undefined :: Attribs)
+    flushCount * sizeOf (undefined :: QuadAttribs)
   unmapSuccess <- glUnmapBuffer gl_ARRAY_BUFFER
   let shouldDraw = unmapSuccess == fromIntegral gl_TRUE
   when shouldDraw . glDrawArrays gl_TRIANGLES (fromIntegral chunkOffset) $
-    fromIntegral flushCount
+    fromIntegral flushCount * 6 -- each sprite has 6 verts
   return shouldDraw
 
 data GraphicsState =
@@ -199,7 +195,8 @@ fShader =
 initializeGraphics :: IO GraphicsState
 initializeGraphics =
   saveAndRestore gl_VERTEX_ARRAY_BINDING glBindVertexArray .
-  saveAndRestore gl_ARRAY_BUFFER_BINDING (glBindBuffer gl_ARRAY_BUFFER_BINDING) $ do
+  saveAndRestoreUnless (==0) gl_ARRAY_BUFFER_BINDING (glBindBuffer gl_ARRAY_BUFFER_BINDING) .
+  saveAndRestore gl_CURRENT_PROGRAM glUseProgram $ do
     vao <- glGen glGenVertexArrays
     vbo <- glGen glGenBuffers
 
@@ -210,6 +207,7 @@ initializeGraphics =
     vs <- compileShader vShader gl_VERTEX_SHADER
     fs <- compileShader fShader gl_FRAGMENT_SHADER
     prog <- linkProgram vs fs
+    glUseProgram prog
 
     texUID <- useAsCString "tex" $ glGetUniformLocation prog . castPtr
     glUniform1i texUID 0

@@ -1,6 +1,7 @@
 {-# OPTIONS -fexpose-all-unfoldings #-}
-module Game.Graphics.Utils (ptrResult, glGen, glGet, saveAndRestore) where
+module Game.Graphics.Utils (ptrResult, glGen, glGet, saveAndRestore, saveAndRestoreUnless) where
 
+import Control.Monad
 import Foreign.Marshal
 import Foreign.Ptr
 import Foreign.Storable
@@ -16,8 +17,12 @@ glGet :: Num a => GLenum -> IO a
 glGet = fmap fromIntegral . ptrResult . glGetIntegerv
 
 saveAndRestore :: GLenum -> (GLuint -> IO ()) -> IO c -> IO c
-saveAndRestore target f m = do
+saveAndRestore = saveAndRestoreUnless $ const False
+
+saveAndRestoreUnless :: (GLuint -> Bool) -> GLenum -> (GLuint -> IO ()) -> IO b -> IO b
+saveAndRestoreUnless p target f m = do
   old <- glGet target
   x <- m
-  f old
+  unless (p old) $ f old
   return x
+  

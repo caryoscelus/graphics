@@ -55,6 +55,10 @@ texture dynImg = do
     ImageRGBA8  img -> texImage2D gl_SRGB8_ALPHA8 gl_RGBA gl_UNSIGNED_BYTE img
     ImageYCbCr8 img -> texImage2D gl_SRGB8        gl_RGB  gl_UNSIGNED_BYTE (convertImage img :: Image PixelRGB8)
   glGenerateMipmap gl_TEXTURE_2D
+  glTexParameteri gl_TEXTURE_2D gl_TEXTURE_MIN_FILTER $ fromIntegral gl_LINEAR_MIPMAP_LINEAR
+  glTexParameteri gl_TEXTURE_2D gl_TEXTURE_MAG_FILTER $ fromIntegral gl_LINEAR_MIPMAP_LINEAR
+  glTexParameteri gl_TEXTURE_2D gl_TEXTURE_WRAP_S $ fromIntegral gl_CLAMP_TO_EDGE
+  glTexParameteri gl_TEXTURE_2D gl_TEXTURE_WRAP_T $ fromIntegral gl_CLAMP_TO_EDGE
   glBindTexture gl_TEXTURE_2D origTid
   return $! Texture tid $ V2 w h
   where texImage2D :: Storable (PixelBaseComponent b) => GLenum -> GLenum -> GLenum -> Image b -> IO (Word, Word)
@@ -71,6 +75,12 @@ loadTexture :: FilePath -> IO (Either String Texture)
 loadTexture = traverseEither texture <=< readImage
   where traverseEither _ (Left l) = return (Left l)
         traverseEither f (Right r) = Right <$> f r
+
+-- TODO It's quite annoying that the newly created sprite does not
+-- match the dimensions of the texture selection. Maybe make a
+-- convenience function for creating the appropriately adjusted
+-- space. This may be easier once we've added a more general polygon
+-- generator.
 
 -- | @sprite top right bottom left texture@ creates a sprite from a texture
 sprite :: Word -> Word -> Word -> Word -> Texture -> Sprite

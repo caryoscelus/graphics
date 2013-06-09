@@ -15,6 +15,7 @@ displayOptions =
                              , displayOptions_numBlueBits             = 8
                              , displayOptions_windowIsResizable       = False
                              , displayOptions_openGLVersion           = (2,1)
+                             , displayOptions_openGLDebugContext      = True
                              }
 
 main :: IO ()
@@ -23,9 +24,11 @@ main = do
   unless glfwInitialized $ error "failed to initialize GLFW"
   windowOpened <- GLFW.openWindow displayOptions
   unless windowOpened $ error "failed to open window"
+  GLFW.setWindowTitle "Foo"
   graphicsState <- initializeGraphics
   tex <- either error id <$> loadTexture "examples/test/wizard/wizard.png"
-  let spr = sprite 0 60 80 0 tex
+  let spr = sprite 0 60 90 0 tex
   draw graphicsState $ return spr
-  threadDelay 1000000
+  GLFW.swapBuffers
+  threadDelay 10000000
   GLFW.terminate
