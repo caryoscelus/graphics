@@ -6,7 +6,7 @@ module Game.Graphics
        ( Space ()
        , mapTransform
        , transform, translate, rotate, scale, shear, reflect
-       , Texture (), Sprite (), texture, loadTexture, sprite
+       , Sampling (..), Texture (), Sprite (), texture, loadTexture, sprite
        , GraphicsState (), initializeGraphics, draw
        ) where
 
@@ -68,6 +68,8 @@ reflect = transform . Transform.reflect
 
 draw :: GraphicsState -> Space GLfloat Sprite -> IO Bool
 draw gs = Stream.draw gs . runSpace
+
+-- TODO top left width height might be more intuitive to use
 
 sprite :: Word -> Word -> Word -> Word -> Texture -> Space Int Sprite
 sprite t r b l tex = do

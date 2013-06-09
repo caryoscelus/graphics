@@ -31,13 +31,11 @@ main = do
   unless windowOpened $ error "failed to open window"
   GLFW.setWindowTitle "Foo"
   graphicsState <- initializeGraphics
-  tex <- either error id <$> loadTexture "examples/test/wizard/wizard.png"
-  let spr1 = mapTransform fromIntegral $ sprite 0 59 89 0 tex
-      spr2 = mapTransform fromIntegral $ sprite 90 59 179 0 tex
+  tex <- either error id <$> loadTexture Nearest "examples/test/wizard/wizard.png"
+  let spr1 = mapTransform fromIntegral $ sprite 7 57 90 3 tex
+      spr2 = mapTransform fromIntegral $ sprite 100 53 179 2 tex
   draw graphicsState $ do
-    translate $ V2 (-1) (-1)
     scale $ V2 (recip $ windowWidth / 2) (recip $ windowHeight / 2)
-    translate $ V2 30 45
     spr1 <|> translate (V2 50 0) *> spr2
   GLFW.swapBuffers
   threadDelay 10000000

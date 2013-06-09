@@ -1,6 +1,9 @@
 {-# OPTIONS -funbox-strict-fields #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Game.Graphics.Sprite (Texture (), Sprite (..), loadTexture, texture, sprite) where
+module Game.Graphics.Sprite
+       ( Texture (), Sprite (..), Sampling (..)
+       , loadTexture, texture, sprite
+       ) where
 
 -- TODO control export better
 
@@ -43,8 +46,6 @@ data Sprite =
 -- TODO also support loading premultiplied alpha directly (no
 -- conversion) so that you can do some neat additive blending tricks
 
--- TODO support for NEAREST blending (and generate no mipmaps for it)
-
 premultiplyAlpha :: Image PixelRGBA8 -> Image PixelRGBA8
 premultiplyAlpha =
   pixelMap $ \(PixelRGBA8 r g b a) ->
@@ -53,9 +54,20 @@ premultiplyAlpha =
   in PixelRGBA8 (mult r) (mult g) (mult b) a
   where linear f x = f (x ** 2.2) ** recip 2.2
 
+data Sampling = Nearest | Linear deriving (Eq, Ord, Read, Show)
+
+setSampling :: Sampling -> IO ()
+setSampling Nearest = do
+  glTexParameteri gl_TEXTURE_2D gl_TEXTURE_MIN_FILTER $ fromIntegral gl_NEAREST
+  glTexParameteri gl_TEXTURE_2D gl_TEXTURE_MAG_FILTER $ fromIntegral gl_NEAREST
+setSampling Linear = do
+  glGenerateMipmap gl_TEXTURE_2D
+  glTexParameteri gl_TEXTURE_2D gl_TEXTURE_MIN_FILTER $ fromIntegral gl_LINEAR_MIPMAP_LINEAR
+  glTexParameteri gl_TEXTURE_2D gl_TEXTURE_MAG_FILTER $ fromIntegral gl_LINEAR
+
 -- | Create a texture from an image loaded using JuicyPixels.
-texture :: DynamicImage -> IO Texture
-texture dynImg = do
+texture :: Sampling -> DynamicImage -> IO Texture
+texture sampling dynImg = do
   origTid <- glGet gl_TEXTURE_BINDING_2D
   tid <- glGen glGenTextures
   glBindTexture gl_TEXTURE_2D tid
@@ -67,9 +79,7 @@ texture dynImg = do
     ImageRGBF   img -> texImage2D gl_RGB32F       gl_RGB  gl_FLOAT         img
     ImageRGBA8  img -> texImage2D gl_SRGB8_ALPHA8 gl_RGBA gl_UNSIGNED_BYTE $ premultiplyAlpha img
     ImageYCbCr8 img -> texImage2D gl_SRGB8        gl_RGB  gl_UNSIGNED_BYTE (convertImage img :: Image PixelRGB8)
-  glGenerateMipmap gl_TEXTURE_2D
-  glTexParameteri gl_TEXTURE_2D gl_TEXTURE_MIN_FILTER $ fromIntegral gl_LINEAR_MIPMAP_LINEAR
-  glTexParameteri gl_TEXTURE_2D gl_TEXTURE_MAG_FILTER $ fromIntegral gl_LINEAR
+  setSampling sampling
   glTexParameteri gl_TEXTURE_2D gl_TEXTURE_WRAP_S $ fromIntegral gl_CLAMP_TO_EDGE
   glTexParameteri gl_TEXTURE_2D gl_TEXTURE_WRAP_T $ fromIntegral gl_CLAMP_TO_EDGE
   glBindTexture gl_TEXTURE_2D origTid
@@ -84,8 +94,8 @@ texture dynImg = do
         unsafeWith :: Storable (PixelBaseComponent a) => Image a -> (Ptr (PixelBaseComponent a) -> IO b) -> IO b
         unsafeWith = Vector.unsafeWith . imageData
 
-loadTexture :: FilePath -> IO (Either String Texture)
-loadTexture = traverseEither texture <=< readImage
+loadTexture :: Sampling -> FilePath -> IO (Either String Texture)
+loadTexture sampling = traverseEither (texture sampling) <=< readImage
   where traverseEither _ (Left l) = return (Left l)
         traverseEither f (Right r) = Right <$> f r
 
