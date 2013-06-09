@@ -99,8 +99,10 @@ loadTexture sampling = traverseEither (texture sampling) <=< readImage
   where traverseEither _ (Left l) = return (Left l)
         traverseEither f (Right r) = Right <$> f r
 
--- | @sprite top right bottom left texture@ creates a sprite from a texture
-sprite :: Word -> Word -> Word -> Word -> Texture -> Sprite
-sprite t r b l tex = Sprite (texId tex) (coord t h) (coord r w) (coord b h) (coord l w)
-  where coord x y = fromIntegral x / y
-        V2 w h = fromIntegral <$> texSize tex
+-- | @sprite topLeft dim tex@ creates a sprite from a texture
+sprite :: V2 Word -> V2 Word -> Texture -> Sprite
+sprite (V2 x y) (V2 w h) tex =
+  Sprite (texId tex)
+  (coord y texH) (coord (x + w - 1) texW) (coord (y + h - 1) texH) (coord x texW)
+  where coord a b = fromIntegral a / b
+        V2 texW texH = fromIntegral <$> texSize tex

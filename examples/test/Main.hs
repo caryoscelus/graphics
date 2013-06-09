@@ -32,8 +32,8 @@ main = do
   GLFW.setWindowTitle "Foo"
   graphicsState <- initializeGraphics
   tex <- either error id <$> loadTexture Nearest "examples/test/wizard/wizard.png"
-  let spr1 = mapTransform fromIntegral $ sprite 7 57 90 3 tex
-      spr2 = mapTransform fromIntegral $ sprite 100 53 179 2 tex
+  let spr1 = mapTransform fromIntegral $ sprite (V2 3 7)   (V2 55 82) tex
+      spr2 = mapTransform fromIntegral $ sprite (V2 2 100) (V2 52 80) tex
   draw graphicsState $ do
     scale $ V2 (recip $ windowWidth / 2) (recip $ windowHeight / 2)
     spr1 <|> translate (V2 50 0) *> spr2

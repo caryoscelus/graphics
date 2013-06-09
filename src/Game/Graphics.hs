@@ -71,13 +71,12 @@ draw gs = Stream.draw gs . runSpace
 
 -- TODO top left width height might be more intuitive to use
 
-sprite :: Word -> Word -> Word -> Word -> Texture -> Space Int Sprite
-sprite t r b l tex = do
+sprite :: V2 Word -> V2 Word -> Texture -> Space Int Sprite
+sprite pos dim tex = do
   translate (V2 (-w `div` 2) (-h `div` 2))
   scale (V2 w h)
-  return $! Sprite.sprite t r b l tex
-  where w = fromIntegral r - fromIntegral l
-        h = fromIntegral b - fromIntegral t
+  return $! Sprite.sprite pos dim tex
+  where V2 w h = fmap fromIntegral dim
 
 mapTransform :: (t -> u) -> Space t a -> Space u a
 mapTransform f = Space . WriterT . (map.second.fmap) f . runSpace
