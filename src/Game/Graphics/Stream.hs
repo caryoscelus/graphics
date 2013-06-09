@@ -137,7 +137,7 @@ chunksToDraw =
   map (\xs@((i, (s, _)):_) -> Chunk i (spriteTexId s) $
                               map (uncurry spriteAttribs . snd) xs) .
   groupBy (\(_,(x,_)) (j,(y,_)) -> spriteTexId x == spriteTexId y && j /= 0) .
-  zip (cycle [0..bufferLen])
+  zip (cycle [0..bufferLen-1])
 
 type VBO = GLuint
 type VAO = GLuint
