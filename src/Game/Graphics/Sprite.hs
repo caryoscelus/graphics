@@ -43,6 +43,8 @@ data Sprite =
 -- TODO also support loading premultiplied alpha directly (no
 -- conversion) so that you can do some neat additive blending tricks
 
+-- TODO support for NEAREST blending (and generate no mipmaps for it)
+
 premultiplyAlpha :: Image PixelRGBA8 -> Image PixelRGBA8
 premultiplyAlpha =
   pixelMap $ \(PixelRGBA8 r g b a) ->
