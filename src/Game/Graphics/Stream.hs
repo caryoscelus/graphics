@@ -122,7 +122,7 @@ drawChunks vao program vbo chunks =
                       glIsEnabled gl_FRAMEBUFFER_SRGB
     unless srgbWasEnabled $ glEnable gl_FRAMEBUFFER_SRGB
 
-    glBlendFunc gl_SRC_ALPHA gl_ONE_MINUS_SRC_ALPHA
+    glBlendFunc gl_ONE gl_ONE_MINUS_SRC_ALPHA
     glEnable gl_BLEND
     
     drewCleanly <- foldM (\ !success chunk -> (&&success) <$> drawChunk chunk)

@@ -38,7 +38,16 @@ data Sprite =
 -- TODO add support for using texture arrays automatically on machines
 -- that support them
 
--- TODO use premultiplied alpha for more better blending
+-- TODO also support loading premultiplied alpha directly (no
+-- conversion) so that you can do some neat additive blending tricks
+
+premultiplyAlpha :: Image PixelRGBA8 -> Image PixelRGBA8
+premultiplyAlpha =
+  pixelMap $ \(PixelRGBA8 r g b a) ->
+  let mult =
+        round . linear (* (fromIntegral a / fromIntegral (maxBound :: Word8))) . (fromIntegral :: Word8 -> Double)
+  in PixelRGBA8 (mult r) (mult g) (mult b) a
+  where linear f x = f (x ** 2.2) ** recip 2.2
 
 -- | Create a texture from an image loaded using JuicyPixels.
 texture :: DynamicImage -> IO Texture
@@ -49,10 +58,10 @@ texture dynImg = do
   (w, h) <- case dynImg of
     ImageY8     img -> texImage2D gl_SRGB8        gl_RED  gl_UNSIGNED_BYTE img
     ImageYF     img -> texImage2D gl_RGB32F       gl_RED  gl_FLOAT         img
-    ImageYA8    img -> texImage2D gl_SRGB8_ALPHA8 gl_RGBA gl_UNSIGNED_BYTE (promoteImage img :: Image PixelRGBA8)
+    ImageYA8    img -> texImage2D gl_SRGB8_ALPHA8 gl_RGBA gl_UNSIGNED_BYTE $ premultiplyAlpha (promoteImage img :: Image PixelRGBA8)
     ImageRGB8   img -> texImage2D gl_SRGB8        gl_RGB  gl_UNSIGNED_BYTE img
-    ImageRGBF   img -> texImage2D gl_RGB32F       gl_RGB  gl_FLOAT         img 
-    ImageRGBA8  img -> texImage2D gl_SRGB8_ALPHA8 gl_RGBA gl_UNSIGNED_BYTE img
+    ImageRGBF   img -> texImage2D gl_RGB32F       gl_RGB  gl_FLOAT         img
+    ImageRGBA8  img -> texImage2D gl_SRGB8_ALPHA8 gl_RGBA gl_UNSIGNED_BYTE $ premultiplyAlpha img
     ImageYCbCr8 img -> texImage2D gl_SRGB8        gl_RGB  gl_UNSIGNED_BYTE (convertImage img :: Image PixelRGB8)
   glGenerateMipmap gl_TEXTURE_2D
   glTexParameteri gl_TEXTURE_2D gl_TEXTURE_MIN_FILTER $ fromIntegral gl_LINEAR_MIPMAP_LINEAR
@@ -76,8 +85,8 @@ loadTexture = traverseEither texture <=< readImage
   where traverseEither _ (Left l) = return (Left l)
         traverseEither f (Right r) = Right <$> f r
 
--- TODO It's quite annoying that the newly created sprite does not
--- match the dimensions of the texture selection. Maybe make a
+-- TODO It can be quite annoying that the newly created sprite does
+-- not match the dimensions of the texture selection. Maybe make a
 -- convenience function for creating the appropriately adjusted
 -- space. This may be easier once we've added a more general polygon
 -- generator.
