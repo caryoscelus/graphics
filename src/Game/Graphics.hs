@@ -69,12 +69,13 @@ reflect = transform . Transform.reflect
 draw :: GraphicsState -> Space GLfloat Sprite -> IO Bool
 draw gs = Stream.draw gs . runSpace
 
-sprite :: Word -> Word -> Word -> Word -> Texture -> Space Word Sprite
+sprite :: Word -> Word -> Word -> Word -> Texture -> Space Int Sprite
 sprite t r b l tex = do
+  translate (V2 (-w `div` 2) (-h `div` 2))
   scale (V2 w h)
   return $! Sprite.sprite t r b l tex
-  where w = r - l
-        h = b - t
+  where w = fromIntegral r - fromIntegral l
+        h = fromIntegral b - fromIntegral t
 
 mapTransform :: (t -> u) -> Space t a -> Space u a
 mapTransform f = Space . WriterT . (map.second.fmap) f . runSpace

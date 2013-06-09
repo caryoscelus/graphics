@@ -35,8 +35,9 @@ main = do
   let spr1 = mapTransform fromIntegral $ sprite 0 59 89 0 tex
       spr2 = mapTransform fromIntegral $ sprite 90 59 179 0 tex
   draw graphicsState $ do
-    translate (V2 (-1) (-1))
-    scale (V2 (recip $ windowWidth / 2) (recip $ windowHeight / 2))
+    translate $ V2 (-1) (-1)
+    scale $ V2 (recip $ windowWidth / 2) (recip $ windowHeight / 2)
+    translate $ V2 30 45
     spr1 <|> translate (V2 50 0) *> spr2
   GLFW.swapBuffers
   threadDelay 10000000
