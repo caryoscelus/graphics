@@ -89,12 +89,6 @@ loadTexture = traverseEither texture <=< readImage
   where traverseEither _ (Left l) = return (Left l)
         traverseEither f (Right r) = Right <$> f r
 
--- TODO It can be quite annoying that the newly created sprite does
--- not match the dimensions of the texture selection. Maybe make a
--- convenience function for creating the appropriately adjusted
--- space. This may be easier once we've added a more general polygon
--- generator.
-
 -- | @sprite top right bottom left texture@ creates a sprite from a texture
 sprite :: Word -> Word -> Word -> Word -> Texture -> Sprite
 sprite t r b l tex = Sprite (texId tex) (coord t h) (coord r w) (coord b h) (coord l w)

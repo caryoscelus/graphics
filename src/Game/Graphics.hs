@@ -4,28 +4,32 @@
 {-# LANGUAGE RecordWildCards #-}
 module Game.Graphics
        ( Space ()
+       , mapTransform
        , transform, translate, rotate, scale, shear, reflect
        , Texture (), Sprite (), texture, loadTexture, sprite
        , GraphicsState (), initializeGraphics, draw
        ) where
 
 import Control.Applicative
+import Control.Arrow
 import Control.Monad
 import Control.Monad.Fix
 import Control.Monad.Trans.Writer
 import Data.Foldable
 import Data.Traversable
+import Data.Word
 import Game.Graphics.AffineTransform (AffineTransform)
-import qualified Game.Graphics.AffineTransform as Transform
-import Game.Graphics.Sprite
-import qualified Game.Graphics.Stream as Stream
+import Game.Graphics.Sprite hiding (sprite)
 import Game.Graphics.Stream (GraphicsState, initializeGraphics)
 import Graphics.Rendering.OpenGL.Raw.Core31
 import Linear.V2
 
+import qualified Game.Graphics.AffineTransform as Transform
+import qualified Game.Graphics.Sprite          as Sprite
+import qualified Game.Graphics.Stream          as Stream
+
 -- TODO (<|>) stacks the right argument on top of the left argument. I
--- think I want it to be the other way around. This probably means
--- more for Stream than Graphics.
+-- think I want it to be the other way around.
 
 -- TODO Some sort of DList-like monad instead of [], also maybe a
 -- transformer (although both of these would complicate the rendering
@@ -64,3 +68,13 @@ reflect = transform . Transform.reflect
 
 draw :: GraphicsState -> Space GLfloat Sprite -> IO Bool
 draw gs = Stream.draw gs . runSpace
+
+sprite :: Word -> Word -> Word -> Word -> Texture -> Space Word Sprite
+sprite t r b l tex = do
+  scale (V2 w h)
+  return $! Sprite.sprite t r b l tex
+  where w = r - l
+        h = b - t
+
+mapTransform :: (t -> u) -> Space t a -> Space u a
+mapTransform f = Space . WriterT . (map.second.fmap) f . runSpace

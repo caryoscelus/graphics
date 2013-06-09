@@ -39,6 +39,7 @@ library
                      Game.Graphics.Utils
   ghc-options:       -O2 -Wall
   other-extensions:  BangPatterns,
+                     DeriveFunctor,
                      FlexibleContexts,
                      GeneralizedNewtypeDeriving,
                      RecordWildCards,

@@ -1,4 +1,5 @@
 {-# OPTIONS -fexpose-all-unfoldings #-}
+{-# LANGUAGE DeriveFunctor #-}
 module Game.Graphics.AffineTransform
        ( AffineTransform ()
        , translate , rotate , scale , shear , reflect , invert, apply
@@ -22,7 +23,8 @@ import Linear.V3
 
 -- TODO Moar instances.
 
-newtype AffineTransform a = AffineTransform (V3 (V3 a)) deriving Show
+newtype AffineTransform a = AffineTransform (V3 (V3 a))
+                          deriving (Functor, Show)
 
 instance Num a => Monoid (AffineTransform a) where
   mempty = AffineTransform eye3

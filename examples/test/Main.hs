@@ -7,10 +7,14 @@ import qualified Graphics.UI.GLFW as GLFW
 
 import Control.Concurrent
 
+windowWidth, windowHeight :: Num a => a
+windowWidth  = 1024
+windowHeight = 768
+
 displayOptions :: DisplayOptions
 displayOptions =
-  GLFW.defaultDisplayOptions { displayOptions_width                   = 1024
-                             , displayOptions_height                  = 768
+  GLFW.defaultDisplayOptions { displayOptions_width                   = windowWidth
+                             , displayOptions_height                  = windowHeight
                              , displayOptions_numRedBits              = 8
                              , displayOptions_numGreenBits            = 8
                              , displayOptions_numBlueBits             = 8
@@ -28,11 +32,12 @@ main = do
   GLFW.setWindowTitle "Foo"
   graphicsState <- initializeGraphics
   tex <- either error id <$> loadTexture "examples/test/wizard/wizard.png"
-  let spr1 = sprite 0 59 89 0 tex
-      spr2 = sprite 90 59 179 0 tex
+  let spr1 = mapTransform fromIntegral $ sprite 0 59 89 0 tex
+      spr2 = mapTransform fromIntegral $ sprite 90 59 179 0 tex
   draw graphicsState $ do
-    translate (V2 0 (-1))
-    spr1 <$ translate (V2 (-1) 0) <|> return spr2
+    translate (V2 (-1) (-1))
+    scale (V2 (recip $ windowWidth / 2) (recip $ windowHeight / 2))
+    spr1 <|> translate (V2 50 0) *> spr2
   GLFW.swapBuffers
   threadDelay 10000000
   GLFW.terminate
