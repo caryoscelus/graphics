@@ -5,7 +5,7 @@
 module Game.Graphics
        ( Space ()
        , transform, translate, rotate, scale, shear, reflect
-       , Texture (), Sprite (), texture, sprite
+       , Texture (), Sprite (), texture, loadTexture, sprite
        , GraphicsState (), initializeGraphics, draw
        ) where
 

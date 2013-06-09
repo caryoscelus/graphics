@@ -193,7 +193,7 @@ fShader =
 
   \void main()\
   \{\
-  \  gl_FragColor = texture2D(texture, texcoord);\
+  \  gl_FragColor = texture2D(tex, texcoord);\
   \}"
 
 initializeGraphics :: IO GraphicsState

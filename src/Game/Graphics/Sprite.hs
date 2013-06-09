@@ -1,12 +1,13 @@
 {-# OPTIONS -funbox-strict-fields #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Game.Graphics.Sprite (Texture (), Sprite (..), texture, sprite) where
+module Game.Graphics.Sprite (Texture (), Sprite (..), loadTexture, texture, sprite) where
 
 -- TODO control export better
 
 import Codec.Picture
 import Codec.Picture.Types
 import Control.Applicative
+import Control.Monad
 import Data.Word
 import Foreign.Ptr
 import Foreign.Storable
@@ -65,6 +66,11 @@ texture dynImg = do
           return $! (fromIntegral w, fromIntegral h)
         unsafeWith :: Storable (PixelBaseComponent a) => Image a -> (Ptr (PixelBaseComponent a) -> IO b) -> IO b
         unsafeWith = Vector.unsafeWith . imageData
+
+loadTexture :: FilePath -> IO (Either String Texture)
+loadTexture = traverseEither texture <=< readImage
+  where traverseEither _ (Left l) = return (Left l)
+        traverseEither f (Right r) = Right <$> f r
 
 -- | @sprite top right bottom left texture@ creates a sprite from a texture
 sprite :: Word -> Word -> Word -> Word -> Texture -> Sprite
