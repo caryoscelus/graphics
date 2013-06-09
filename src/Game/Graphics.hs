@@ -23,11 +23,17 @@ import Game.Graphics.Stream (GraphicsState, initializeGraphics)
 import Graphics.Rendering.OpenGL.Raw.Core31
 import Linear.V2
 
+-- TODO (<|>) stacks the right argument on top of the left argument. I
+-- think I want it to be the other way around. This probably means
+-- more for Stream than Graphics.
+
 -- TODO Some sort of DList-like monad instead of [], also maybe a
 -- transformer (although both of these would complicate the rendering
 -- code, it might still be a good idea)?
+
 -- TODO A more specialized WriterT (maybe the whole thing should just
 -- be specialized)
+
 newtype Space c a = Space { unSpace :: WriterT (AffineTransform c) [] a }
                   deriving ( Functor, Applicative, Monad, Alternative
                            , MonadPlus, MonadFix, Foldable, Traversable

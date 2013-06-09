@@ -1,8 +1,9 @@
 import Control.Applicative
 import Control.Monad
 import Game.Graphics
-import qualified Graphics.UI.GLFW as GLFW
 import Graphics.UI.GLFW (DisplayOptions (..))
+import Linear.V2
+import qualified Graphics.UI.GLFW as GLFW
 
 import Control.Concurrent
 
@@ -27,8 +28,11 @@ main = do
   GLFW.setWindowTitle "Foo"
   graphicsState <- initializeGraphics
   tex <- either error id <$> loadTexture "examples/test/wizard/wizard.png"
-  let spr = sprite 0 60 90 0 tex
-  draw graphicsState $ return spr
+  let spr1 = sprite 0 59 89 0 tex
+      spr2 = sprite 90 59 179 0 tex
+  draw graphicsState $ do
+    translate (V2 0 (-1))
+    spr1 <$ translate (V2 (-1) 0) <|> return spr2
   GLFW.swapBuffers
   threadDelay 10000000
   GLFW.terminate
