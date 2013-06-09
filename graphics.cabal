@@ -22,7 +22,7 @@ source-repository head
   location:          git://github.com/haskell-game/graphics.git
 
 library
-  build-depends:     base >= 4.5 && < 4.6,
+  build-depends:     base >= 4.5 && < 4.7,
                      bytestring == 0.10.*,
                      linear == 1.1.*,
                      JuicyPixels == 3.0.*,
@@ -47,7 +47,7 @@ library
 executable test
   if !flag(examples)
     buildable:       False
-  build-depends:     base >= 4.5 && < 4.6,
+  build-depends:     base >= 4.5 && < 4.7,
                      GLFW-b == 0.1.*,
                      graphics == 0.0.0
   default-language:  Haskell2010
