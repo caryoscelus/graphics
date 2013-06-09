@@ -41,7 +41,6 @@ data TriangleAttribs =
                   , corner3 :: !Attribs
                   } deriving Show
 
--- BUG something is wrong. peek and poke don't agree for some reason
 instance Storable TriangleAttribs where
   sizeOf    _ = sizeOf    (undefined :: Attribs) * 3
   alignment _ = alignment (undefined :: Attribs)
