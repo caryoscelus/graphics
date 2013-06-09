@@ -35,10 +35,10 @@ main = do
   graphicsState <- initializeGraphics
   tex <- either error id <$> loadTexture Nearest "examples/test/wizard/wizard.png"
   let spr1 = mapTransform fromIntegral $ sprite (V2 3 7)   (V2 55 82) tex
-      spr2 = mapTransform fromIntegral $ modulatedSprite (opaque (cyan :: Colour Double)) (V2 2 100) (V2 52 80) tex
+      spr2 = mapTransform fromIntegral $ modulatedSprite ((yellowgreen :: Colour Double) `withOpacity` 0.75) (V2 2 100) (V2 52 80) tex
   _ <- draw graphicsState $ do
     scale $ V2 (recip $ windowWidth / 2) (recip $ windowHeight / 2)
-    spr1 <|> translate (V2 50 0) *> spr2
+    spr1 <|> translate (V2 (-20) 0) *> spr2
   GLFW.swapBuffers
   threadDelay 3000000
   GLFW.terminate
