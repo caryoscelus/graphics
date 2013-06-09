@@ -9,7 +9,7 @@ module Game.Graphics
        , Sampling (..), Texture ()
        , texture, texturePremultiplied, loadTexture, loadTexturePremultiplied
        , Sprite (), sprite, modulatedSprite
-       , GraphicsState (), initializeGraphics, draw
+       , GraphicsState (), initializeGraphics, draw, clear
        ) where
 
 import Control.Applicative
@@ -77,6 +77,9 @@ reflect = transform . Transform.reflect
 
 draw :: GraphicsState -> Space GLfloat Sprite -> IO Bool
 draw gs = Stream.draw gs . runSpace
+
+clear :: IO ()
+clear = glClear gl_COLOR_BUFFER_BIT
 
 modulatedSprite :: Real a => AlphaColour a -> V2 Word -> V2 Word -> Texture -> Space Int Sprite
 modulatedSprite color pos dim tex = do
