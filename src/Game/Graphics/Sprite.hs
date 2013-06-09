@@ -52,8 +52,6 @@ data Sprite =
 -- TODO also support loading premultiplied alpha directly (no
 -- conversion) so that you can do some neat additive blending tricks
 
--- TODO Add tinting and transparency adjustments.
-
 premultiplyAlpha :: Image PixelRGBA8 -> Image PixelRGBA8
 premultiplyAlpha =
   pixelMap $ \(PixelRGBA8 r g b a) ->
