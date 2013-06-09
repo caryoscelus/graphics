@@ -86,7 +86,7 @@ modulatedSprite color pos dim tex = do
   where V2 w h = fmap fromIntegral dim
 
 sprite :: V2 Word -> V2 Word -> Texture -> Space Int Sprite
-sprite = modulatedSprite (opaque white :: AlphaColour GLfloat)
+sprite = modulatedSprite (opaque (white :: Colour GLfloat))
 
 mapTransform :: (t -> u) -> Space t a -> Space u a
 mapTransform f = Space . WriterT . (fmap.second.fmap) f . runWriterT . unSpace
