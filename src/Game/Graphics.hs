@@ -43,9 +43,6 @@ import qualified Game.Graphics.Stream          as Stream
 -- MonadFix. What did it mean, is it useful, and would it be worth
 -- trying to get back?
 
--- TODO Add tinting and transparency adjustments. Does it go in this
--- monad? I think it does...
-
 newtype Space c a = Space { unSpace :: WriterT (AffineTransform c) FMList a }
                   deriving ( Functor, Foldable, Traversable, Applicative
                            , Alternative, Monad, MonadPlus
