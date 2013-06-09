@@ -32,6 +32,8 @@ data Sprite =
          , spriteLeft   :: !GLfloat
          }
 
+-- TODO support for tiling textures, somehow
+
 -- TODO add support for custom mipmaps, or write a high quality
 -- mipmapper right here
 
