@@ -13,6 +13,7 @@ import Codec.Picture.Types
 import Control.Applicative
 import Control.Monad
 import Data.Colour
+import Data.Colour.SRGB
 import Data.Colour.SRGB.Linear
 import Data.Word
 import Foreign.Ptr
@@ -52,15 +53,15 @@ data Sprite =
 -- TODO also support loading premultiplied alpha directly (no
 -- conversion) so that you can do some neat additive blending tricks
 
--- TODO use Colour for this operation. better linear operations!
-
 premultiplyAlpha :: Image PixelRGBA8 -> Image PixelRGBA8
-premultiplyAlpha =
-  pixelMap $ \(PixelRGBA8 r g b a) ->
-  let mult =
-        round . linear (* (fromIntegral a / fromIntegral (maxBound :: Word8))) . (fromIntegral :: Word8 -> Double)
-  in PixelRGBA8 (mult r) (mult g) (mult b) a
-  where linear f x = f (x ** 2.2) ** recip 2.2
+premultiplyAlpha = pixelMap $ fromColour . toColour
+  where toColour (PixelRGBA8 r g b a) =
+          sRGB24 r g b `withOpacity`
+          (fromIntegral a / fromIntegral (maxBound :: Word8)) :: AlphaColour Double
+        fromColour alphaColor =
+          let a = round $ alphaChannel alphaColor * fromIntegral (maxBound :: Word8)
+              RGB r g b = toSRGB24 $ alphaColor `over` black
+          in PixelRGBA8 r g b a
 
 data Sampling = Nearest | Linear deriving (Eq, Ord, Read, Show)
 
