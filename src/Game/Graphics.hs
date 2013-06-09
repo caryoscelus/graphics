@@ -13,8 +13,8 @@ module Game.Graphics
 import Control.Applicative
 import Control.Arrow
 import Control.Monad
-import Control.Monad.Fix
 import Control.Monad.Trans.Writer
+import Data.FMList hiding (toList, transform)
 import Data.Foldable
 import Data.Traversable
 import Data.Word
@@ -31,20 +31,21 @@ import qualified Game.Graphics.Stream          as Stream
 -- TODO (<|>) stacks the right argument on top of the left argument. I
 -- think I want it to be the other way around.
 
--- TODO Some sort of DList-like monad instead of [], also maybe a
--- transformer (although both of these would complicate the rendering
--- code, it might still be a good idea)?
+-- TODO Would it be a good idea to turn this into a transformer? It
+-- would certainly complicate things, especially in the renderer, if I
+-- want to retain the ability to do the computation lazily while
+-- rendering, but perhaps it would be worth it...
 
 -- TODO A more specialized WriterT (maybe the whole thing should just
 -- be specialized)
 
-newtype Space c a = Space { unSpace :: WriterT (AffineTransform c) [] a }
-                  deriving ( Functor, Applicative, Monad, Alternative
-                           , MonadPlus, MonadFix, Foldable, Traversable
+newtype Space c a = Space { unSpace :: WriterT (AffineTransform c) FMList a }
+                  deriving ( Functor, Foldable, Traversable, Applicative
+                           , Alternative, Monad, MonadPlus
                            )
 
 runSpace :: Space c a -> [(a, AffineTransform c)]
-runSpace = runWriterT . unSpace
+runSpace = toList . runWriterT . unSpace
 
 -- TODO put these into a MonadSpace class?
 
@@ -69,8 +70,6 @@ reflect = transform . Transform.reflect
 draw :: GraphicsState -> Space GLfloat Sprite -> IO Bool
 draw gs = Stream.draw gs . runSpace
 
--- TODO top left width height might be more intuitive to use
-
 sprite :: V2 Word -> V2 Word -> Texture -> Space Int Sprite
 sprite pos dim tex = do
   translate (V2 (-w `div` 2) (-h `div` 2))
@@ -79,4 +78,4 @@ sprite pos dim tex = do
   where V2 w h = fmap fromIntegral dim
 
 mapTransform :: (t -> u) -> Space t a -> Space u a
-mapTransform f = Space . WriterT . (map.second.fmap) f . runSpace
+mapTransform f = Space . WriterT . (fmap.second.fmap) f . runWriterT . unSpace

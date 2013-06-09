@@ -24,6 +24,7 @@ source-repository head
 library
   build-depends:     base >= 4.5 && < 4.7,
                      bytestring == 0.10.*,
+                     fmlist == 0.8.*,
                      linear == 1.1.*,
                      JuicyPixels == 3.0.*,
                      OpenGLRaw == 1.3.*,
