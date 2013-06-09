@@ -39,6 +39,10 @@ import qualified Game.Graphics.Stream          as Stream
 -- TODO A more specialized WriterT (maybe the whole thing should just
 -- be specialized)
 
+-- TODO Before I switched to FMList, this was an instance of
+-- MonadFix. What did it mean, is it useful, and would it be worth
+-- trying to get back?
+
 newtype Space c a = Space { unSpace :: WriterT (AffineTransform c) FMList a }
                   deriving ( Functor, Foldable, Traversable, Applicative
                            , Alternative, Monad, MonadPlus
