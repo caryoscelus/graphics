@@ -3,7 +3,7 @@
 {-# LANGUAGE ViewPatterns #-}
 module Game.Graphics.Sprite
        ( Texture (), Sprite (..), Sampling (..)
-       , loadTexture, texture, modulatedSprite
+       , loadTexture, texture, texturePremultiplied, modulatedSprite
        ) where
 
 -- TODO control export better
@@ -50,9 +50,6 @@ data Sprite =
 -- TODO add support for using texture arrays automatically on machines
 -- that support them
 
--- TODO also support loading premultiplied alpha directly (no
--- conversion) so that you can do some neat additive blending tricks
-
 premultiplyAlpha :: Image PixelRGBA8 -> Image PixelRGBA8
 premultiplyAlpha = pixelMap $ fromColour . toColour
   where toColour (PixelRGBA8 r g b a) =
@@ -75,18 +72,18 @@ setSampling Linear = do
   glTexParameteri gl_TEXTURE_2D gl_TEXTURE_MAG_FILTER $ fromIntegral gl_LINEAR
 
 -- | Create a texture from an image loaded using JuicyPixels.
-texture :: Sampling -> DynamicImage -> IO Texture
-texture sampling dynImg = do
+texture' :: (Image PixelRGBA8 -> Image PixelRGBA8) -> Sampling -> DynamicImage -> IO Texture
+texture' preprocess sampling dynImg = do
   origTid <- glGet gl_TEXTURE_BINDING_2D
   tid <- glGen glGenTextures
   glBindTexture gl_TEXTURE_2D tid
   (w, h) <- case dynImg of
     ImageY8     img -> texImage2D gl_SRGB8        gl_RED  gl_UNSIGNED_BYTE img
     ImageYF     img -> texImage2D gl_RGB32F       gl_RED  gl_FLOAT         img
-    ImageYA8    img -> texImage2D gl_SRGB8_ALPHA8 gl_RGBA gl_UNSIGNED_BYTE $ premultiplyAlpha (promoteImage img :: Image PixelRGBA8)
+    ImageYA8    img -> texImage2D gl_SRGB8_ALPHA8 gl_RGBA gl_UNSIGNED_BYTE $ preprocess (promoteImage img :: Image PixelRGBA8)
     ImageRGB8   img -> texImage2D gl_SRGB8        gl_RGB  gl_UNSIGNED_BYTE img
     ImageRGBF   img -> texImage2D gl_RGB32F       gl_RGB  gl_FLOAT         img
-    ImageRGBA8  img -> texImage2D gl_SRGB8_ALPHA8 gl_RGBA gl_UNSIGNED_BYTE $ premultiplyAlpha img
+    ImageRGBA8  img -> texImage2D gl_SRGB8_ALPHA8 gl_RGBA gl_UNSIGNED_BYTE $ preprocess img
     ImageYCbCr8 img -> texImage2D gl_SRGB8        gl_RGB  gl_UNSIGNED_BYTE (convertImage img :: Image PixelRGB8)
   setSampling sampling
   glTexParameteri gl_TEXTURE_2D gl_TEXTURE_WRAP_S $ fromIntegral gl_CLAMP_TO_EDGE
@@ -102,6 +99,12 @@ texture sampling dynImg = do
           return $! (fromIntegral w, fromIntegral h)
         unsafeWith :: Storable (PixelBaseComponent a) => Image a -> (Ptr (PixelBaseComponent a) -> IO b) -> IO b
         unsafeWith = Vector.unsafeWith . imageData
+
+texture :: Sampling -> DynamicImage -> IO Texture
+texture = texture' premultiplyAlpha
+
+texturePremultiplied :: Sampling -> DynamicImage -> IO Texture
+texturePremultiplied = texture' id
 
 loadTexture :: Sampling -> FilePath -> IO (Either String Texture)
 loadTexture sampling = traverseEither (texture sampling) <=< readImage
