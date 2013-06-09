@@ -207,7 +207,6 @@ vShader =
 
   \attribute vec2 position;\
   \attribute vec2 texPosition;\
-  \attribute float blendFactor;\
   \attribute vec4 blendColor;\
 
   \varying vec2 texcoord;\
