@@ -1,8 +1,9 @@
 {-# OPTIONS -funbox-strict-fields #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ViewPatterns #-}
 module Game.Graphics.Sprite
        ( Texture (), Sprite (..), Sampling (..)
-       , loadTexture, texture, sprite
+       , loadTexture, texture, modulatedSprite
        ) where
 
 -- TODO control export better
@@ -11,12 +12,16 @@ import Codec.Picture
 import Codec.Picture.Types
 import Control.Applicative
 import Control.Monad
+import Data.Colour
+import Data.Colour.SRGB.Linear
 import Data.Word
 import Foreign.Ptr
 import Foreign.Storable
 import Game.Graphics.Utils
 import Graphics.Rendering.OpenGL.Raw.Core32
 import Linear.V2
+import Linear.V4
+
 import qualified Data.Vector.Storable as Vector
 
 data Texture =
@@ -28,11 +33,12 @@ data Texture =
 -- of it.
 
 data Sprite =
-  Sprite { spriteTexId  :: !GLuint
-         , spriteTop    :: !GLfloat
-         , spriteRight  :: !GLfloat
-         , spriteBottom :: !GLfloat
-         , spriteLeft   :: !GLfloat
+  Sprite { spriteTexId         :: !GLuint
+         , spriteTop           :: !GLfloat
+         , spriteRight         :: !GLfloat
+         , spriteBottom        :: !GLfloat
+         , spriteLeft          :: !GLfloat
+         , spriteModulateColor :: !(V4 GLfloat)
          }
 
 -- TODO support for tiling textures, somehow
@@ -101,10 +107,11 @@ loadTexture sampling = traverseEither (texture sampling) <=< readImage
   where traverseEither _ (Left l) = return (Left l)
         traverseEither f (Right r) = Right <$> f r
 
--- | @sprite topLeft dim tex@ creates a sprite from a texture
-sprite :: V2 Word -> V2 Word -> Texture -> Sprite
-sprite (V2 x y) (V2 w h) tex =
+-- | @modulatedSprite color topLeft dim tex@ creates a sprite from a texture
+modulatedSprite :: Real a => AlphaColour a -> V2 Word -> V2 Word -> Texture -> Sprite
+modulatedSprite (alphaColourConvert -> color) (V2 x y) (V2 w h) tex =
   Sprite (texId tex)
-  (coord y texH) (coord (x + w - 1) texW) (coord (y + h - 1) texH) (coord x texW)
+  (coord y texH) (coord (x + w - 1) texW) (coord (y + h - 1) texH) (coord x texW) (V4 red green blue $ alphaChannel color)
   where coord a b = fromIntegral a / b
         V2 texW texH = fromIntegral <$> texSize tex
+        RGB red green blue = toRGB $ color `over` black

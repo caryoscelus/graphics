@@ -19,19 +19,57 @@ import Game.Graphics.Sprite
 import Game.Graphics.Utils
 import Graphics.Rendering.OpenGL.Raw.Core31
 import Linear.V2
+import Linear.V4
 
 -- Attributes for a single vertex
 data Attribs =
-  Attribs { attribsPos :: !(V2 GLfloat)
-          , attribsTex :: !(V2 GLfloat)
+  Attribs { attribsPos         :: !(V2 GLfloat)
+          , attribsTex         :: !(V2 GLfloat)
+          , attribsModulateColor  :: !(V4 GLfloat)
           } deriving Show
 
+-- TODO Put this useful indexed monad somewhere else
+
+evalSmartPtr :: (Ptr i -> IO (a, Ptr j)) -> Ptr i -> IO a
+evalSmartPtr m ptr = fst <$> m ptr
+
+infixl 1 !>>=, !>>
+(!>>=) :: (Ptr i -> IO (a, Ptr j)) -> (a -> Ptr j -> IO (b, Ptr k)) -> Ptr i -> IO (b, Ptr k)
+(m !>>= f) ptr = do
+  (x, ptr') <- m ptr
+  f x ptr'
+
+(!>>) :: (Ptr i -> IO ((), Ptr j)) -> (Ptr j -> IO (b, Ptr k)) -> Ptr i -> IO (b, Ptr k)
+a !>> b = a !>>= \() -> b
+
+ixreturn :: a -> Ptr b -> IO (a, Ptr b)
+ixreturn x ptr = return (x, ptr)
+
+smartPeek :: Storable a => Ptr a -> IO (a, Ptr b)
+smartPeek ptr = do
+  x <- peek ptr
+  return (x, ptr `plusPtr` sizeOf x)
+
+smartPoke :: Storable a => a -> Ptr a -> IO ((), Ptr b)
+smartPoke x ptr = do
+  poke ptr x
+  return ((), ptr `plusPtr` sizeOf x)
+
 instance Storable Attribs where
-  sizeOf    _ = sizeOf    (undefined :: V2 GLfloat) * 2
+  sizeOf    _ = sizeOf (undefined :: V2 GLfloat) * 2 +
+                sizeOf (undefined :: V4 GLfloat)
   alignment _ = alignment (undefined :: V2 GLfloat)
-  peek (castPtr -> ptr) = liftA2 Attribs (peek ptr) (peekElemOff ptr 1)
+  peek (castPtr -> ptr) =
+    (`evalSmartPtr` ptr) $
+    smartPeek !>>= \pos    ->
+    smartPeek !>>= \tex    ->
+    smartPeek !>>= \color  ->
+    ixreturn $! Attribs pos tex color
   poke (castPtr -> ptr) Attribs{..} =
-    poke ptr attribsPos >> pokeElemOff ptr 1 attribsTex
+    (`evalSmartPtr` ptr) $
+    smartPoke attribsPos !>>
+    smartPoke attribsTex !>>
+    smartPoke attribsModulateColor
 
 -- Attributes for a triangle (the corners must be in counterclockwise
 -- order)
@@ -69,13 +107,13 @@ spriteAttribs :: Sprite -> AffineTransform GLfloat -> QuadAttribs
 spriteAttribs Sprite{..} t =
   QuadAttribs
   (TriangleAttribs 
-   (Attribs ll $ V2 spriteLeft  spriteBottom)
-   (Attribs ur $ V2 spriteRight spriteTop)
-   (Attribs ul $ V2 spriteLeft  spriteTop))
+   (Attribs ll (V2 spriteLeft  spriteBottom) spriteModulateColor)
+   (Attribs ur (V2 spriteRight spriteTop)    spriteModulateColor)
+   (Attribs ul (V2 spriteLeft  spriteTop)    spriteModulateColor))
   (TriangleAttribs
-   (Attribs ll $ V2 spriteLeft  spriteBottom)
-   (Attribs lr $ V2 spriteRight spriteBottom)
-   (Attribs ur $ V2 spriteRight spriteTop))
+   (Attribs ll (V2 spriteLeft  spriteBottom) spriteModulateColor)
+   (Attribs lr (V2 spriteRight spriteBottom) spriteModulateColor)
+   (Attribs ur (V2 spriteRight spriteTop   ) spriteModulateColor))
   where (ll, ul, lr, ur) = applyFourCorners01 t
 
 bufferBytes :: Num a => a
@@ -169,13 +207,17 @@ vShader =
 
   \attribute vec2 position;\
   \attribute vec2 texPosition;\
+  \attribute float blendFactor;\
+  \attribute vec4 blendColor;\
 
   \varying vec2 texcoord;\
+  \varying vec4 color;\
 
   \void main()\
   \{\
   \  gl_Position = vec4(position, 0.0, 1.0);\
   \  texcoord = texPosition;\
+  \  color = blendColor;\
   \}"
 
 fShader :: ByteString
@@ -185,10 +227,11 @@ fShader =
   \uniform sampler2D tex;\
 
   \varying vec2 texcoord;\
+  \varying vec4 color;\
 
   \void main()\
   \{\
-  \  gl_FragColor = texture2D(tex, texcoord);\
+  \  gl_FragColor = texture2D(tex, texcoord) * color;\
   \}"
 
 initializeGraphics :: IO GraphicsState
@@ -215,14 +258,21 @@ initializeGraphics =
                  glGetAttribLocation prog . castPtr
     vTexPosition <- fmap fromIntegral . useAsCString "texPosition" $
                     glGetAttribLocation prog . castPtr
+    vModulateColor <- fmap fromIntegral . useAsCString "blendColor" $
+                      glGetAttribLocation prog . castPtr
 
     glVertexAttribPointer vPosition 2 gl_FLOAT (fromIntegral gl_FALSE)
       (fromIntegral $ sizeOf (undefined :: Attribs)) $ intPtrToPtr 0
     glVertexAttribPointer vTexPosition 2 gl_FLOAT (fromIntegral gl_FALSE)
       (fromIntegral $ sizeOf (undefined :: Attribs)) . intPtrToPtr .
       fromIntegral $ sizeOf (undefined :: V2 GLfloat)
+    glVertexAttribPointer vModulateColor 4 gl_FLOAT (fromIntegral gl_FALSE)
+      (fromIntegral $ sizeOf (undefined :: Attribs)) . intPtrToPtr .
+      fromIntegral $ sizeOf (undefined :: V2 GLfloat) * 2
+
     glEnableVertexAttribArray vPosition
     glEnableVertexAttribArray vTexPosition
+    glEnableVertexAttribArray vModulateColor
 
     return $! GraphicsState vbo vao prog
 

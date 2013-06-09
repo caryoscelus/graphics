@@ -6,7 +6,8 @@ module Game.Graphics
        ( Space ()
        , mapTransform
        , transform, translate, rotate, scale, shear, reflect
-       , Sampling (..), Texture (), Sprite (), texture, loadTexture, sprite
+       , Sampling (..), Texture (), texture, loadTexture
+       , Sprite (), sprite, modulatedSprite
        , GraphicsState (), initializeGraphics, draw
        ) where
 
@@ -14,12 +15,14 @@ import Control.Applicative
 import Control.Arrow
 import Control.Monad
 import Control.Monad.Trans.Writer
+import Data.Colour
+import Data.Colour.Names (white)
 import Data.FMList hiding (toList, transform)
 import Data.Foldable
 import Data.Traversable
 import Data.Word
 import Game.Graphics.AffineTransform (AffineTransform)
-import Game.Graphics.Sprite hiding (sprite)
+import Game.Graphics.Sprite hiding (modulatedSprite)
 import Game.Graphics.Stream (GraphicsState, initializeGraphics)
 import Graphics.Rendering.OpenGL.Raw.Core31
 import Linear.V2
@@ -74,12 +77,15 @@ reflect = transform . Transform.reflect
 draw :: GraphicsState -> Space GLfloat Sprite -> IO Bool
 draw gs = Stream.draw gs . runSpace
 
-sprite :: V2 Word -> V2 Word -> Texture -> Space Int Sprite
-sprite pos dim tex = do
+modulatedSprite :: Real a => AlphaColour a -> V2 Word -> V2 Word -> Texture -> Space Int Sprite
+modulatedSprite color pos dim tex = do
   translate (V2 (-w `div` 2) (-h `div` 2))
   scale (V2 w h)
-  return $! Sprite.sprite pos dim tex
+  return $! Sprite.modulatedSprite color pos dim tex
   where V2 w h = fmap fromIntegral dim
+
+sprite :: V2 Word -> V2 Word -> Texture -> Space Int Sprite
+sprite = modulatedSprite (opaque white :: AlphaColour GLfloat)
 
 mapTransform :: (t -> u) -> Space t a -> Space u a
 mapTransform f = Space . WriterT . (fmap.second.fmap) f . runWriterT . unSpace
