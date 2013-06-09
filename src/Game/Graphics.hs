@@ -6,7 +6,8 @@ module Game.Graphics
        ( Space ()
        , mapTransform
        , transform, translate, rotate, scale, shear, reflect
-       , Sampling (..), Texture (), texture, loadTexture
+       , Sampling (..), Texture ()
+       , texture, texturePremultiplied, loadTexture, loadTexturePremultiplied
        , Sprite (), sprite, modulatedSprite
        , GraphicsState (), initializeGraphics, draw
        ) where

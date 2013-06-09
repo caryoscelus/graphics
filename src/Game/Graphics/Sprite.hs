@@ -3,7 +3,9 @@
 {-# LANGUAGE ViewPatterns #-}
 module Game.Graphics.Sprite
        ( Texture (), Sprite (..), Sampling (..)
-       , loadTexture, texture, texturePremultiplied, modulatedSprite
+       , loadTexture, loadTexturePremultiplied
+       , texture, texturePremultiplied
+       , modulatedSprite
        ) where
 
 -- TODO control export better
@@ -106,10 +108,16 @@ texture = texture' premultiplyAlpha
 texturePremultiplied :: Sampling -> DynamicImage -> IO Texture
 texturePremultiplied = texture' id
 
-loadTexture :: Sampling -> FilePath -> IO (Either String Texture)
-loadTexture sampling = traverseEither (texture sampling) <=< readImage
+loadTexture' :: (Sampling -> DynamicImage -> IO Texture) -> Sampling -> FilePath -> IO (Either String Texture)
+loadTexture' f sampling = traverseEither (f sampling) <=< readImage
   where traverseEither _ (Left l) = return (Left l)
-        traverseEither f (Right r) = Right <$> f r
+        traverseEither g (Right r) = Right <$> g r
+
+loadTexture :: Sampling -> FilePath -> IO (Either String Texture)
+loadTexture = loadTexture' texture
+
+loadTexturePremultiplied :: Sampling -> FilePath -> IO (Either String Texture)
+loadTexturePremultiplied = loadTexture' texturePremultiplied
 
 -- | @modulatedSprite color topLeft dim tex@ creates a sprite from a texture
 modulatedSprite :: Real a => AlphaColour a -> V2 Word -> V2 Word -> Texture -> Sprite
