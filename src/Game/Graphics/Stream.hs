@@ -31,26 +31,32 @@ data Attribs =
 -- TODO Put this useful indexed monad somewhere else
 
 evalSmartPtr :: (Ptr i -> IO (a, Ptr j)) -> Ptr i -> IO a
+{-# INLINE evalSmartPtr #-}
 evalSmartPtr m ptr = fst <$> m ptr
 
 infixl 1 !>>=, !>>
 (!>>=) :: (Ptr i -> IO (a, Ptr j)) -> (a -> Ptr j -> IO (b, Ptr k)) -> Ptr i -> IO (b, Ptr k)
+{-# INLINE (!>>=) #-}
 (m !>>= f) ptr = do
   (x, ptr') <- m ptr
   f x ptr'
 
 (!>>) :: (Ptr i -> IO ((), Ptr j)) -> (Ptr j -> IO (b, Ptr k)) -> Ptr i -> IO (b, Ptr k)
+{-# INLINE (!>>) #-}
 a !>> b = a !>>= \() -> b
 
 ixreturn :: a -> Ptr b -> IO (a, Ptr b)
+{-# INLINE ixreturn #-}
 ixreturn x ptr = return (x, ptr)
 
 smartPeek :: Storable a => Ptr a -> IO (a, Ptr b)
+{-# INLINE smartPeek #-}
 smartPeek ptr = do
   x <- peek ptr
   return (x, ptr `plusPtr` sizeOf x)
 
 smartPoke :: Storable a => a -> Ptr a -> IO ((), Ptr b)
+{-# INLINE smartPoke #-}
 smartPoke x ptr = do
   poke ptr x
   return ((), ptr `plusPtr` sizeOf x)

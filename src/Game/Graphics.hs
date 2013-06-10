@@ -15,10 +15,10 @@ module Game.Graphics
 import Control.Applicative
 import Control.Arrow
 import Control.Monad
+import Control.Monad.Fix
 import Control.Monad.Trans.Writer
 import Data.Colour
 import Data.Colour.Names (white)
-import Data.FMList hiding (toList, transform)
 import Data.Foldable
 import Data.Traversable
 import Data.Word
@@ -43,13 +43,9 @@ import qualified Game.Graphics.Stream          as Stream
 -- TODO A more specialized WriterT (maybe the whole thing should just
 -- be specialized)
 
--- TODO Before I switched to FMList, this was an instance of
--- MonadFix. What did it mean, is it useful, and would it be worth
--- trying to get back?
-
-newtype Space c a = Space { unSpace :: WriterT (AffineTransform c) FMList a }
+newtype Space c a = Space { unSpace :: WriterT (AffineTransform c) [] a }
                   deriving ( Functor, Foldable, Traversable, Applicative
-                           , Alternative, Monad, MonadPlus
+                           , Alternative, Monad, MonadPlus, MonadFix
                            )
 
 runSpace :: Space c a -> [(a, AffineTransform c)]
