@@ -1,14 +1,12 @@
 import Control.Applicative
 import Control.Monad
+import Data.Colour
+import Data.Colour.Names
+import Data.Time
 import Game.Graphics
 import Graphics.UI.GLFW (DisplayOptions (..))
 import Linear.V2
 import qualified Graphics.UI.GLFW as GLFW
-import Data.Colour
-import Data.Colour.Names
-
-import Control.Concurrent
-import Data.Time
 
 windowWidth, windowHeight :: Num a => a
 windowWidth  = 1024
@@ -36,11 +34,11 @@ main = do
   GLFW.setWindowBufferSwapInterval 0
   graphicsState <- initializeGraphics
   tex <- either error id <$> loadTexture Nearest "examples/test/wizard/wizard.png"
-  let spr1 = mapTransform fromIntegral $ sprite (V2 3 7)   (V2 55 82) tex
+  let spr1 = mapTransform fromIntegral $ sprite (V2 3 7) (V2 55 82) tex
       spr2 = mapTransform fromIntegral $ modulatedSprite ((yellowgreen :: Colour Double) `withOpacity` 0.75) (V2 2 100) (V2 52 80) tex
       image = do
         scale $ V2 (recip $ windowWidth / 2) (recip $ windowHeight / 2)
-        msum $ take 14000 $ cycle [spr1, translate (V2 (-20) 0) *> spr2]
+        msum . take 18000 $ cycle [spr1, translate (V2 (-20) 0) *> spr2]
   start <- getCurrentTime
   forM_ [0..99::Int] $ \_ -> do
     clear
@@ -49,3 +47,4 @@ main = do
   stop <- getCurrentTime
   print $ stop `diffUTCTime` start / 100
   GLFW.terminate
+

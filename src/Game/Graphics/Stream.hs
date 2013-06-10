@@ -23,8 +23,8 @@ import Linear.V4
 
 -- Attributes for a single vertex
 data Attribs =
-  Attribs { attribsPos         :: !(V2 GLfloat)
-          , attribsTex         :: !(V2 GLfloat)
+  Attribs { attribsPos            :: !(V2 GLfloat)
+          , attribsTex            :: !(V2 GLfloat)
           , attribsModulateColor  :: !(V4 GLfloat)
           } deriving Show
 
@@ -53,13 +53,15 @@ smartPeek :: Storable a => Ptr a -> IO (a, Ptr b)
 {-# INLINE smartPeek #-}
 smartPeek ptr = do
   x <- peek ptr
-  return (x, ptr `plusPtr` sizeOf x)
+  let !ptr' = ptr `plusPtr` sizeOf x
+  return $! (x, ptr')
 
 smartPoke :: Storable a => a -> Ptr a -> IO ((), Ptr b)
 {-# INLINE smartPoke #-}
 smartPoke x ptr = do
   poke ptr x
-  return ((), ptr `plusPtr` sizeOf x)
+  let !ptr' = ptr `plusPtr` sizeOf x  
+  return $! ((), ptr')
 
 instance Storable Attribs where
   sizeOf    _ = sizeOf (undefined :: V2 GLfloat) * 2 +
