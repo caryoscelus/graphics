@@ -43,8 +43,7 @@ instance Storable Attribs where
     pokeByteOff (castPtr ptr) (sizeOf attribsPos) attribsTex
     pokeByteOff (castPtr ptr) (sizeOf attribsPos + sizeOf attribsTex) attribsModulateColor
 
--- Attributes for a quad. Implemented as two triangles with some
--- redundancy.
+-- Attributes for a quad.
 data QuadAttribs =
   QuadAttribs { upperLeft  :: !Attribs
               , upperRight :: !Attribs
