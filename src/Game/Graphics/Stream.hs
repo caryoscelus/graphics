@@ -29,56 +29,19 @@ data Attribs =
           , attribsModulateColor  :: !(V4 GLfloat)
           } deriving Show
 
--- TODO Put this useful indexed monad somewhere else
-
-evalSmartPtr :: (Ptr i -> IO (a, Ptr j)) -> Ptr i -> IO a
-{-# INLINE evalSmartPtr #-}
-evalSmartPtr m ptr = fst <$> m ptr
-
-infixl 1 !>>=, !>>
-(!>>=) :: (Ptr i -> IO (a, Ptr j)) -> (a -> Ptr j -> IO (b, Ptr k)) -> Ptr i -> IO (b, Ptr k)
-{-# INLINE (!>>=) #-}
-(m !>>= f) ptr = do
-  (x, ptr') <- m ptr
-  f x ptr'
-
-(!>>) :: (Ptr i -> IO ((), Ptr j)) -> (Ptr j -> IO (b, Ptr k)) -> Ptr i -> IO (b, Ptr k)
-{-# INLINE (!>>) #-}
-a !>> b = a !>>= \() -> b
-
-ixreturn :: a -> Ptr b -> IO (a, Ptr b)
-{-# INLINE ixreturn #-}
-ixreturn x ptr = return (x, ptr)
-
-smartPeek :: Storable a => Ptr a -> IO (a, Ptr b)
-{-# INLINE smartPeek #-}
-smartPeek ptr = do
-  x <- peek ptr
-  let !ptr' = ptr `plusPtr` sizeOf x
-  return $! (x, ptr')
-
-smartPoke :: Storable a => a -> Ptr a -> IO ((), Ptr b)
-{-# INLINE smartPoke #-}
-smartPoke x ptr = do
-  poke ptr x
-  let !ptr' = ptr `plusPtr` sizeOf x  
-  return $! ((), ptr')
-
 instance Storable Attribs where
   sizeOf    _ = sizeOf (undefined :: V2 GLfloat) * 2 +
                 sizeOf (undefined :: V4 GLfloat)
   alignment _ = alignment (undefined :: V2 GLfloat)
-  peek (castPtr -> ptr) =
-    (`evalSmartPtr` ptr) $
-    smartPeek !>>= \pos    ->
-    smartPeek !>>= \tex    ->
-    smartPeek !>>= \color  ->
-    ixreturn $! Attribs pos tex color
-  poke (castPtr -> ptr) Attribs{..} =
-    (`evalSmartPtr` ptr) $
-    smartPoke attribsPos !>>
-    smartPoke attribsTex !>>
-    smartPoke attribsModulateColor
+  peek ptr = do
+    pos <- peek $ castPtr ptr
+    tex <- peekByteOff (castPtr ptr) $ sizeOf pos
+    col <- peekByteOff (castPtr ptr) $ sizeOf pos + sizeOf tex
+    return $! Attribs pos tex col
+  poke ptr Attribs{..} = do
+    poke (castPtr ptr) attribsPos
+    pokeByteOff (castPtr ptr) (sizeOf attribsPos) attribsTex
+    pokeByteOff (castPtr ptr) (sizeOf attribsPos + sizeOf attribsTex) attribsModulateColor
 
 -- Attributes for a quad. Implemented as two triangles with some
 -- redundancy.
