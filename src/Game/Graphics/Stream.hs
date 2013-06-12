@@ -11,6 +11,7 @@ import Control.Monad
 import Data.Bits
 import Data.ByteString (ByteString, useAsCString)
 import Data.List
+import qualified Data.Vector.Storable as Vector
 import Foreign.Ptr
 import Foreign.Storable
 import Game.Graphics.AffineTransform
@@ -79,49 +80,32 @@ instance Storable Attribs where
     smartPoke attribsTex !>>
     smartPoke attribsModulateColor
 
--- Attributes for a triangle (the corners must be in counterclockwise
--- order)
-data TriangleAttribs =
-  TriangleAttribs { corner1 :: !Attribs
-                  , corner2 :: !Attribs
-                  , corner3 :: !Attribs
-                  } deriving Show
-
-instance Storable TriangleAttribs where
-  sizeOf    _ = sizeOf    (undefined :: Attribs) * 3
-  alignment _ = alignment (undefined :: Attribs)
-  peek (castPtr -> ptr) =
-    liftA3 TriangleAttribs (peek ptr) (peekElemOff ptr 1) (peekElemOff ptr 2)
-  poke (castPtr -> ptr) TriangleAttribs{..} = do
-    poke ptr corner1
-    pokeElemOff ptr 1 corner2
-    pokeElemOff ptr 2 corner3
-
 -- Attributes for a quad. Implemented as two triangles with some
 -- redundancy.
 data QuadAttribs =
-  QuadAttribs { upperLeft  :: !TriangleAttribs
-              , lowerRight :: !TriangleAttribs
+  QuadAttribs { upperLeft  :: !Attribs
+              , upperRight :: !Attribs
+              , lowerLeft  :: !Attribs
+              , lowerRight :: !Attribs
               } deriving Show
 
 instance Storable QuadAttribs where
-  sizeOf    _ = sizeOf    (undefined :: TriangleAttribs) * 2
-  alignment _ = alignment (undefined :: TriangleAttribs)
-  peek (castPtr -> ptr) = liftA2 QuadAttribs (peek ptr) (peekElemOff ptr 1)
-  poke (castPtr -> ptr) QuadAttribs{..} =
-    poke ptr upperLeft >> pokeElemOff ptr 1 lowerRight
+  sizeOf    _ = sizeOf    (undefined :: Attribs) * 4
+  alignment _ = alignment (undefined :: Attribs)
+  peek (castPtr -> ptr) = QuadAttribs <$> peek ptr <*> peekElemOff ptr 1 <*> peekElemOff ptr 2 <*> peekElemOff ptr 3
+  poke (castPtr -> ptr) QuadAttribs{..} = do
+    poke ptr upperLeft
+    pokeElemOff ptr 1 upperRight
+    pokeElemOff ptr 2 lowerLeft
+    pokeElemOff ptr 3 lowerRight
 
 spriteAttribs :: Sprite -> AffineTransform GLfloat -> QuadAttribs
 spriteAttribs Sprite{..} t =
   QuadAttribs
-  (TriangleAttribs 
-   (Attribs ll (V2 spriteLeft  spriteBottom) spriteModulateColor)
+   (Attribs ul (V2 spriteLeft  spriteTop)    spriteModulateColor)
    (Attribs ur (V2 spriteRight spriteTop)    spriteModulateColor)
-   (Attribs ul (V2 spriteLeft  spriteTop)    spriteModulateColor))
-  (TriangleAttribs
    (Attribs ll (V2 spriteLeft  spriteBottom) spriteModulateColor)
    (Attribs lr (V2 spriteRight spriteBottom) spriteModulateColor)
-   (Attribs ur (V2 spriteRight spriteTop   ) spriteModulateColor))
   where (ll, ul, lr, ur) = applyFourCorners01 t
 
 bufferBytes :: Num a => a
@@ -147,22 +131,27 @@ chunksToDraw =
   groupBy (\(_,(x,_)) (j,(y,_)) -> spriteTexId x == spriteTexId y && j /= 0) .
   zip (cycle [0..bufferLen-1])
 
-type VBO = GLuint
-type VAO = GLuint
-type Program = GLuint
+data GraphicsState =
+  GraphicsState { vbo     :: !GLuint
+                , ibo     :: !GLuint
+                , vao     :: !GLuint
+                , program :: !GLuint
+                }
 
 -- TODO restore the blend function
-drawChunks :: VAO -> Program -> VBO -> [Chunk] -> IO Bool
-drawChunks vao program vbo chunks =
+drawChunks :: GraphicsState -> [Chunk] -> IO Bool
+drawChunks GraphicsState{..} chunks =
   saveAndRestore gl_VERTEX_ARRAY_BINDING glBindVertexArray .
   saveAndRestore gl_CURRENT_PROGRAM glUseProgram .
   saveAndRestore gl_ACTIVE_TEXTURE glActiveTexture .
   saveAndRestore gl_TEXTURE_2D (glBindTexture gl_TEXTURE_2D) .
+  saveAndRestoreUnless (==0) gl_ELEMENT_ARRAY_BUFFER_BINDING (glBindBuffer gl_ELEMENT_ARRAY_BUFFER_BINDING) .
   saveAndRestoreUnless (==0) gl_ARRAY_BUFFER_BINDING (glBindBuffer gl_ARRAY_BUFFER) $ do
     glBindVertexArray vao
     glUseProgram program -- assume that the uniform for the sampler is already set
     glActiveTexture gl_TEXTURE0
     glBindBuffer gl_ARRAY_BUFFER vbo
+    glBindBuffer gl_ELEMENT_ARRAY_BUFFER ibo
     srgbWasEnabled <- (== fromIntegral gl_TRUE) <$>
                       glIsEnabled gl_FRAMEBUFFER_SRGB
     unless srgbWasEnabled $ glEnable gl_FRAMEBUFFER_SRGB
@@ -199,15 +188,8 @@ drawChunk Chunk{..} = do
     flushCount * sizeOf (undefined :: QuadAttribs)
   unmapSuccess <- glUnmapBuffer gl_ARRAY_BUFFER
   let shouldDraw = unmapSuccess == fromIntegral gl_TRUE
-  when shouldDraw . glDrawArrays gl_TRIANGLES (fromIntegral chunkOffset) $
-    fromIntegral flushCount * 6 -- each sprite has 6 verts
+  when shouldDraw $ glDrawElements gl_TRIANGLES (fromIntegral flushCount * 6) gl_UNSIGNED_INT (plusPtr nullPtr $ chunkOffset * sizeOf (undefined :: GLuint))
   return shouldDraw
-
-data GraphicsState =
-  GraphicsState { vbo     :: !GLuint
-                , vao     :: !GLuint
-                , program :: !GLuint
-                }
 
 vShader :: ByteString
 vShader =
@@ -245,13 +227,24 @@ initializeGraphics :: IO GraphicsState
 initializeGraphics =
   saveAndRestore gl_VERTEX_ARRAY_BINDING glBindVertexArray .
   saveAndRestoreUnless (==0) gl_ARRAY_BUFFER_BINDING (glBindBuffer gl_ARRAY_BUFFER_BINDING) .
+  saveAndRestoreUnless (==0) gl_ELEMENT_ARRAY_BUFFER_BINDING (glBindBuffer gl_ELEMENT_ARRAY_BUFFER_BINDING) .
   saveAndRestore gl_CURRENT_PROGRAM glUseProgram $ do
     vao <- glGen glGenVertexArrays
     vbo <- glGen glGenBuffers
+    ibo <- glGen glGenBuffers
 
-    glBindVertexArray vao  
+    glBindVertexArray vao
+    
     glBindBuffer gl_ARRAY_BUFFER vbo
     glBufferData gl_ARRAY_BUFFER bufferBytes nullPtr gl_STREAM_DRAW
+
+    let indices = Vector.concat . zipWith (Vector.map . (+) . (4*)) [0..] . replicate bufferLen $ Vector.fromList [0,2,1,1,2,3] :: Vector.Vector GLuint
+
+    glBindBuffer gl_ELEMENT_ARRAY_BUFFER ibo
+    Vector.unsafeWith indices $ \ptr ->
+      glBufferData gl_ELEMENT_ARRAY_BUFFER
+      (fromIntegral $ bufferLen * sizeOf (undefined :: GLuint) * 6) ptr
+      gl_STATIC_DRAW
 
     vs <- compileShader vShader gl_VERTEX_SHADER
     fs <- compileShader fShader gl_FRAGMENT_SHADER
@@ -281,7 +274,7 @@ initializeGraphics =
     glEnableVertexAttribArray vTexPosition
     glEnableVertexAttribArray vModulateColor
 
-    return $! GraphicsState vbo vao prog
+    return $! GraphicsState vbo ibo vao prog
 
 draw :: GraphicsState -> [(Sprite, AffineTransform GLfloat)] -> IO Bool
-draw GraphicsState{..} = drawChunks vao program vbo . chunksToDraw
+draw gs = drawChunks gs . chunksToDraw
