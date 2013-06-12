@@ -35,14 +35,6 @@ import qualified Game.Graphics.Stream          as Stream
 -- TODO (<|>) stacks the right argument on top of the left argument. I
 -- think I want it to be the other way around.
 
--- TODO Would it be a good idea to turn this into a transformer? It
--- would certainly complicate things, especially in the renderer, if I
--- want to retain the ability to do the computation lazily while
--- rendering, but perhaps it would be worth it...
-
--- TODO A more specialized WriterT (maybe the whole thing should just
--- be specialized)
-
 newtype Space c a = Space { unSpace :: WriterT (AffineTransform c) [] a }
                   deriving ( Functor, Foldable, Traversable, Applicative
                            , Alternative, Monad, MonadPlus, MonadFix
