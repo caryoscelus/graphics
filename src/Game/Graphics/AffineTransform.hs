@@ -1,5 +1,6 @@
 {-# OPTIONS -fexpose-all-unfoldings #-}
 {-# OPTIONS -funbox-strict-fields   #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveFunctor #-}
 module Game.Graphics.AffineTransform
        ( AffineTransform ()
@@ -17,7 +18,9 @@ import Linear.V2
 -- TODO It's not really right for this to be a Functor. There should
 -- just be some primitives for converting.
 
--- TODO Consider making these fields monomorphic.
+-- TODO Consider making these fields monomorphic or at least
+-- specializing for just a few types. They account for a lot of heap
+-- usage, right now.
 
 data AffineTransform a = A2D !a !a !a
                              !a !a !a
@@ -41,10 +44,10 @@ translate (V2 x y) = A2D 1 0 x
 
 rotate :: Floating a => a -> AffineTransform a
 {-# INLINE rotate #-}
-rotate r = A2D cosr (-sinr) 0
+rotate !r = A2D cosr (-sinr) 0
                sinr   cosr  0
-  where cosr = cos r
-        sinr = sin r
+  where !cosr = cos r
+        !sinr = sin r
 
 scale :: Num a => V2 a -> AffineTransform a
 {-# INLINE scale #-}
@@ -61,16 +64,16 @@ reflect :: Num a => V2 a -> AffineTransform a
 {-# INLINE reflect #-}
 reflect (V2 x y) = A2D (x2 - y2) twoXY     0
                        twoXY     (y2 - x2) 0
-  where twoXY = 2 * x * y
-        x2    = x * x
-        y2    = y * y
+  where !twoXY = 2 * x * y
+        !x2    = x * x
+        !y2    = y * y
 
 invert :: Fractional a => AffineTransform a -> AffineTransform a
 {-# INLINE invert #-}
 invert (A2D a11 a12 a13
             a21 a22 a23) = A2D (a22/det) (-a12/det) ((a12*a23 - a22*a13) / det)
                                (-a21/det) (a11/det) ((a21*a13 - a11*a23) / det)
-  where det = a11*a22 - a12 * a21
+  where !det = a11*a22 - a12 * a21
 
 apply :: Num a => AffineTransform a -> V2 a -> V2 a
 {-# INLINE apply #-}
@@ -83,7 +86,7 @@ applyFourCorners01 :: Num a => AffineTransform a -> (V2 a, V2 a, V2 a, V2 a)
 applyFourCorners01 (A2D a11 a12 a13
                         a21 a22 a23) =
   (zz, zzzo, zz + oz, zzzo + oz)
-  where zz = V2 a13 a23
-        zo = V2 a12 a22
-        oz = V2 a11 a21
-        zzzo = zz + zo
+  where !zz = V2 a13 a23
+        !zo = V2 a12 a22
+        !oz = V2 a11 a21
+        !zzzo = zz + zo

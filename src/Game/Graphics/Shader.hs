@@ -1,3 +1,4 @@
+{-# LANGUAGE RankNTypes #-}
 module Game.Graphics.Shader (compileShader, linkProgram) where
 
 import qualified Data.ByteString as BS
@@ -6,6 +7,9 @@ import Foreign.Marshal
 import Foreign.Ptr
 import Foreign.Storable
 import Graphics.Rendering.OpenGL.Raw.Core31
+
+import Data.Colour
+import Data.Colour.SRGB.Linear
 
 compileShader :: BS.ByteString -> GLenum -> IO GLuint
 compileShader src kind = do

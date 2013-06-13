@@ -24,24 +24,44 @@ import Linear.V4
 
 -- Attributes for a single vertex
 data Attribs =
-  Attribs { attribsPos            :: !(V2 GLfloat)
-          , attribsTex            :: !(V2 GLfloat)
-          , attribsModulateColor  :: !(V4 GLfloat)
+  Attribs { attribsPosX      :: !GLfloat
+          , attribsPosY      :: !GLfloat
+          , attribsTexX      :: !GLfloat
+          , attribsTexY      :: !GLfloat
+          , attribsModulateR :: !GLfloat
+          , attribsModulateG :: !GLfloat
+          , attribsModulateB :: !GLfloat
+          , attribsModulateA :: !GLfloat
           } deriving Show
 
 instance Storable Attribs where
   sizeOf    _ = sizeOf (undefined :: V2 GLfloat) * 2 +
                 sizeOf (undefined :: V4 GLfloat)
   alignment _ = alignment (undefined :: V2 GLfloat)
-  peek ptr = do
-    pos <- peek $ castPtr ptr
-    tex <- peekByteOff (castPtr ptr) $ sizeOf pos
-    col <- peekByteOff (castPtr ptr) $ sizeOf pos + sizeOf tex
-    return $! Attribs pos tex col
-  poke ptr Attribs{..} = do
-    poke (castPtr ptr) attribsPos
-    pokeByteOff (castPtr ptr) (sizeOf attribsPos) attribsTex
-    pokeByteOff (castPtr ptr) (sizeOf attribsPos + sizeOf attribsTex) attribsModulateColor
+  peek (castPtr -> !ptr) =
+    Attribs           <$>
+    peek        ptr   <*>
+    peekElemOff ptr 1 <*>
+    peekElemOff ptr 2 <*>
+    peekElemOff ptr 3 <*>
+    peekElemOff ptr 4 <*>
+    peekElemOff ptr 5 <*>
+    peekElemOff ptr 6 <*>
+    peekElemOff ptr 7
+  poke (castPtr -> !ptr) Attribs{..} = do
+    poke        ptr   attribsPosX
+    pokeElemOff ptr 1 attribsPosY
+    pokeElemOff ptr 2 attribsTexX
+    pokeElemOff ptr 3 attribsTexY
+    pokeElemOff ptr 4 attribsModulateR
+    pokeElemOff ptr 5 attribsModulateG
+    pokeElemOff ptr 6 attribsModulateB
+    pokeElemOff ptr 7 attribsModulateA
+    
+    -- do
+    -- poke (castPtr ptr) attribsPos
+    -- pokeByteOff (castPtr ptr) (sizeOf attribsPos) attribsTex
+    -- pokeByteOff (castPtr ptr) (sizeOf attribsPos + sizeOf attribsTex) attribsModulateColor
 
 -- Attributes for a quad.
 data QuadAttribs =
@@ -54,21 +74,21 @@ data QuadAttribs =
 instance Storable QuadAttribs where
   sizeOf    _ = sizeOf    (undefined :: Attribs) * 4
   alignment _ = alignment (undefined :: Attribs)
-  peek (castPtr -> ptr) = QuadAttribs <$> peek ptr <*> peekElemOff ptr 1 <*> peekElemOff ptr 2 <*> peekElemOff ptr 3
-  poke (castPtr -> ptr) QuadAttribs{..} = do
+  peek (castPtr -> !ptr) = QuadAttribs <$> peek ptr <*> peekElemOff ptr 1 <*> peekElemOff ptr 2 <*> peekElemOff ptr 3
+  poke (castPtr -> !ptr) QuadAttribs{..} = do
     poke ptr upperLeft
     pokeElemOff ptr 1 upperRight
     pokeElemOff ptr 2 lowerLeft
     pokeElemOff ptr 3 lowerRight
 
 spriteAttribs :: Sprite -> AffineTransform GLfloat -> QuadAttribs
-spriteAttribs Sprite{..} t =
+spriteAttribs Sprite{..} !t =
   QuadAttribs
-   (Attribs ul (V2 spriteLeft  spriteTop)    spriteModulateColor)
-   (Attribs ur (V2 spriteRight spriteTop)    spriteModulateColor)
-   (Attribs ll (V2 spriteLeft  spriteBottom) spriteModulateColor)
-   (Attribs lr (V2 spriteRight spriteBottom) spriteModulateColor)
-  where (ll, ul, lr, ur) = applyFourCorners01 t
+   (Attribs ulx uly spriteLeft  spriteTop    spriteModulateR spriteModulateG spriteModulateB spriteModulateA)
+   (Attribs urx ury spriteRight spriteTop    spriteModulateR spriteModulateG spriteModulateB spriteModulateA)
+   (Attribs llx lly spriteLeft  spriteBottom spriteModulateR spriteModulateG spriteModulateB spriteModulateA)
+   (Attribs lrx lry spriteRight spriteBottom spriteModulateR spriteModulateG spriteModulateB spriteModulateA)
+  where (V2 !llx !lly, V2 !ulx !uly, V2 !lrx !lry, V2 !urx !ury) = applyFourCorners01 t
 
 bufferBytes :: Num a => a
 bufferBytes = 4*1024*1024
@@ -133,23 +153,23 @@ drawChunks GraphicsState{..} chunks =
 -- so instead of trying to handle it we just report it.
 drawChunk :: Chunk -> IO Bool
 drawChunk Chunk{..} = do
-  let offsetBytes = fromIntegral $ chunkOffset * sizeOf (undefined :: QuadAttribs)
-      rangeBytes = (bufferLen - chunkOffset)   * sizeOf (undefined :: QuadAttribs)
-      invalidateBufferBit
+  let !offsetBytes = fromIntegral $ chunkOffset * sizeOf (undefined :: QuadAttribs)
+      !rangeBytes = (bufferLen - chunkOffset)   * sizeOf (undefined :: QuadAttribs)
+      !invalidateBufferBit
         | chunkOffset == 0 = gl_MAP_INVALIDATE_BUFFER_BIT
         | otherwise        = 0
   glBindTexture gl_TEXTURE_2D chunkTexId
-  ptr <- glMapBufferRange gl_ARRAY_BUFFER offsetBytes (fromIntegral rangeBytes) $
-         gl_MAP_WRITE_BIT            .|.
-         gl_MAP_INVALIDATE_RANGE_BIT .|.
-         gl_MAP_FLUSH_EXPLICIT_BIT   .|.
-         gl_MAP_UNSYNCHRONIZED_BIT   .|.
-         invalidateBufferBit
-  flushCount <- foldM (\off quad -> off + 1 <$ pokeElemOff ptr off quad) 0 chunkQuads
+  !ptr <- glMapBufferRange gl_ARRAY_BUFFER offsetBytes (fromIntegral rangeBytes) $
+          gl_MAP_WRITE_BIT            .|.
+          gl_MAP_INVALIDATE_RANGE_BIT .|.
+          gl_MAP_FLUSH_EXPLICIT_BIT   .|.
+          gl_MAP_UNSYNCHRONIZED_BIT   .|.
+          invalidateBufferBit
+  !flushCount <- foldM (\off quad -> off + 1 <$ pokeElemOff ptr off quad) 0 chunkQuads
   glFlushMappedBufferRange gl_ARRAY_BUFFER 0 . fromIntegral $
     flushCount * sizeOf (undefined :: QuadAttribs)
   unmapSuccess <- glUnmapBuffer gl_ARRAY_BUFFER
-  let shouldDraw = unmapSuccess == fromIntegral gl_TRUE
+  let !shouldDraw = unmapSuccess == fromIntegral gl_TRUE
   when shouldDraw $ glDrawElements gl_TRIANGLES (fromIntegral flushCount * 6) gl_UNSIGNED_INT (plusPtr nullPtr $ chunkOffset * sizeOf (undefined :: GLuint))
   return shouldDraw
 
@@ -239,4 +259,4 @@ initializeGraphics =
     return $! GraphicsState vbo ibo vao prog
 
 draw :: GraphicsState -> [(Sprite, AffineTransform GLfloat)] -> IO Bool
-draw gs = drawChunks gs . chunksToDraw
+draw !gs = drawChunks gs . chunksToDraw

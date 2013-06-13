@@ -1,5 +1,6 @@
 {-# OPTIONS -fexpose-all-unfoldings #-}
 {-# OPTIONS -funbox-strict-fields #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RecordWildCards #-}
 module Game.Graphics
@@ -64,7 +65,7 @@ reflect :: Num c => V2 c -> Space c ()
 reflect = transform . Transform.reflect
 
 draw :: GraphicsState -> Space GLfloat Sprite -> IO Bool
-draw gs = Stream.draw gs . runSpace
+draw !gs = Stream.draw gs . runSpace
 
 clear :: IO ()
 clear = glClear gl_COLOR_BUFFER_BIT

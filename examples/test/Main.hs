@@ -40,10 +40,10 @@ main = do
         scale $ V2 (recip $ windowWidth / 2) (recip $ windowHeight / 2)
         msum . take 19250 $ cycle [spr1, translate (V2 (-20) 0) *> spr2]
   start <- getCurrentTime
-  forM_ [0..99::Int] $ \_ -> do
+  forM_ [0..999::Int] $ \_ -> do
     clear
     _ <- draw graphicsState image
     GLFW.swapBuffers
   stop <- getCurrentTime
-  print $ stop `diffUTCTime` start / 100
+  print $ stop `diffUTCTime` start / 1000
   GLFW.terminate

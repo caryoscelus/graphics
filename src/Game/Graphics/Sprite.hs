@@ -36,12 +36,15 @@ data Texture =
 -- of it.
 
 data Sprite =
-  Sprite { spriteTexId         :: !GLuint
-         , spriteTop           :: !GLfloat
-         , spriteRight         :: !GLfloat
-         , spriteBottom        :: !GLfloat
-         , spriteLeft          :: !GLfloat
-         , spriteModulateColor :: !(V4 GLfloat)
+  Sprite { spriteTexId     :: !GLuint
+         , spriteTop       :: !GLfloat
+         , spriteRight     :: !GLfloat
+         , spriteBottom    :: !GLfloat
+         , spriteLeft      :: !GLfloat
+         , spriteModulateR :: !GLfloat
+         , spriteModulateG :: !GLfloat
+         , spriteModulateB :: !GLfloat
+         , spriteModulateA :: !GLfloat
          }
 
 -- TODO support for tiling textures, somehow
@@ -123,7 +126,7 @@ loadTexturePremultiplied = loadTexture' texturePremultiplied
 modulatedSprite :: Real a => AlphaColour a -> V2 Word -> V2 Word -> Texture -> Sprite
 modulatedSprite (alphaColourConvert -> color) (V2 x y) (V2 w h) tex =
   Sprite (texId tex)
-  (coord y texH) (coord (x + w - 1) texW) (coord (y + h - 1) texH) (coord x texW) (V4 red green blue $ alphaChannel color)
+  (coord y texH) (coord (x + w - 1) texW) (coord (y + h - 1) texH) (coord x texW) red green blue $ alphaChannel color
   where coord a b = fromIntegral a / b
         V2 texW texH = fromIntegral <$> texSize tex
         RGB red green blue = toRGB $ color `over` black
