@@ -38,7 +38,7 @@ main = do
       spr2 = mapTransform fromIntegral $ modulatedSprite ((yellowgreen :: Colour Double) `withOpacity` 0.75) (V2 2 100) (V2 52 80) tex
       image = do
         scale $ V2 (recip $ windowWidth / 2) (recip $ windowHeight / 2)
-        msum . take 19250 $ cycle [spr1, translate (V2 (-20) 0) *> spr2]
+        msum . take 20000 $ cycle [spr1, translate (V2 (-20) 0) *> spr2]
   start <- getCurrentTime
   forM_ [0..999::Int] $ \_ -> do
     clear

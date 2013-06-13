@@ -8,9 +8,6 @@ import Foreign.Ptr
 import Foreign.Storable
 import Graphics.Rendering.OpenGL.Raw.Core31
 
-import Data.Colour
-import Data.Colour.SRGB.Linear
-
 compileShader :: BS.ByteString -> GLenum -> IO GLuint
 compileShader src kind = do
   sid <- glCreateShader kind

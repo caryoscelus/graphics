@@ -23,7 +23,6 @@ import Foreign.Storable
 import Game.Graphics.Utils
 import Graphics.Rendering.OpenGL.Raw.Core32
 import Linear.V2
-import Linear.V4
 
 import qualified Data.Vector.Storable as Vector
 
