@@ -58,11 +58,6 @@ instance Storable Attribs where
     pokeElemOff ptr 6 attribsModulateB
     pokeElemOff ptr 7 attribsModulateA
     
-    -- do
-    -- poke (castPtr ptr) attribsPos
-    -- pokeByteOff (castPtr ptr) (sizeOf attribsPos) attribsTex
-    -- pokeByteOff (castPtr ptr) (sizeOf attribsPos + sizeOf attribsTex) attribsModulateColor
-
 -- Attributes for a quad.
 data QuadAttribs =
   QuadAttribs { upperLeft  :: !Attribs
@@ -170,7 +165,9 @@ drawChunk Chunk{..} = do
     flushCount * sizeOf (undefined :: QuadAttribs)
   unmapSuccess <- glUnmapBuffer gl_ARRAY_BUFFER
   let !shouldDraw = unmapSuccess == fromIntegral gl_TRUE
-  when shouldDraw $ glDrawElements gl_TRIANGLES (fromIntegral flushCount * 6) gl_UNSIGNED_INT (plusPtr nullPtr $ chunkOffset * sizeOf (undefined :: GLuint))
+  when shouldDraw $ glDrawElements gl_TRIANGLES (fromIntegral flushCount * 6)
+    gl_UNSIGNED_INT
+    (plusPtr nullPtr $ chunkOffset * sizeOf (undefined :: GLuint) * 6)
   return shouldDraw
 
 vShader :: ByteString
