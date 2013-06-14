@@ -40,9 +40,11 @@ main = do
       image x = do
         scale $ V2 (recip $ windowWidth / 2) (recip $ windowHeight / 2)
         let scaleOf1 = x / 500 + 0.25
+        translate (V2 (-250) 0) <|> return ()
+        msum $ map (\n -> scale (let y = x * n / 10000 in V2 y y)) [0..99]
         return () <|> (translate (V2 (x/100) (x-500)) *> rotate (-x*pi/1000))
-        (scale (V2 scaleOf1 scaleOf1) *> spr1) <|> (translate (V2 (500-x) 0) *> rotate (x*pi/500) *> scale 3 *> spr2) <|>
-          (translate (V2 0 200) *> ((scale (V2 scaleOf1 scaleOf1) *> spr3) <|> (translate (V2 (500-x) 0) *> rotate (x*pi/500) *> scale 3 *> spr4)))
+        (translate (V2 (-x/7) 0) *> scale (V2 scaleOf1 scaleOf1) *> spr1) <|> (translate (V2 (500-x) 0) *> rotate (x*pi/500) *> scale 3 *> spr2) <|>
+          (translate (V2 0 200) *> ((translate (V2 (-x/7) 0) *> scale (V2 scaleOf1 scaleOf1) *> spr3) <|> (translate (V2 (500-x) 0) *> rotate (x*pi/500) *> scale 3 *> spr4)))
   forM_ [0..999] $ \x -> do
     clear
     _ <- draw graphicsState $ image x
