@@ -9,6 +9,8 @@ import qualified Graphics.UI.GLFW as GLFW
 
 import Graphics.Rendering.OpenGL.Raw.Core31 (glViewport)
 
+import Data.Time
+
 windowWidth, windowHeight :: Num a => a
 windowWidth  = 1024
 windowHeight = 768
@@ -32,6 +34,7 @@ main = do
   windowOpened <- GLFW.openWindow displayOptions
   unless windowOpened $ error "failed to open window"
   GLFW.setWindowTitle "Wizard!"
+  GLFW.setWindowBufferSwapInterval 0
   glViewport 0 0 windowWidth windowHeight
   graphicsState <- initializeGraphics
   tex <- either error id <$> loadTexture Linear "examples/test/wizard/wizard.png"
@@ -42,8 +45,11 @@ main = do
         msum $ map (\x -> scale (let y = (x+1)/75 in V2 y y) *> translate (V2 (x*5 - 250) 0) *>
                           ((translate (V2 0 (sin (pi*x/50 + n/250) * 250)) *> spr1) <|>
                            (translate (V2 0 (cos (pi*x/50 + n/250) * 250)) *> spr2))) [0..99]
-  forM_ [0..] $ \x -> do
+  start <- getCurrentTime
+  forM_ [0..9999] $ \x -> do
     clear
     _ <- draw graphicsState $ image x
     GLFW.swapBuffers
+  stop <- getCurrentTime
+  print $ stop `diffUTCTime` start / 10000
   GLFW.terminate

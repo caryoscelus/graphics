@@ -1,6 +1,5 @@
 {-# OPTIONS -fexpose-all-unfoldings #-}
 {-# OPTIONS -funbox-strict-fields #-}
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RecordWildCards #-}
 module Game.Graphics
@@ -14,14 +13,13 @@ module Game.Graphics
        ) where
 
 import Control.Applicative
-import Control.Arrow
 import Control.Monad
 import Control.Monad.Fix
-import Control.Monad.Trans.Writer
+import Control.Monad.Trans.State.Strict
 import Data.Colour
 import Data.Colour.Names (white)
 import Data.Foldable
-import Data.Traversable
+import Data.Monoid
 import Data.Word
 import Game.Graphics.AffineTransform (AffineTransform)
 import Game.Graphics.Sprite hiding (modulatedSprite)
@@ -36,18 +34,21 @@ import qualified Game.Graphics.Stream          as Stream
 -- TODO (<|>) stacks the right argument on top of the left argument. I
 -- think I want it to be the other way around.
 
-newtype Space c a = Space { unSpace :: WriterT (AffineTransform c) [] a }
-                  deriving ( Functor, Foldable, Traversable, Applicative
+-- TODO Foldable and Traversable (yes, it can be done, since this is
+-- actually a WriterT in disguise!)
+
+newtype Space c a = Space { unSpace :: StateT (AffineTransform c) [] a }
+                  deriving ( Functor, {- Foldable, Traversable, -} Applicative
                            , Alternative, Monad, MonadPlus, MonadFix
                            )
 
-runSpace :: Space c a -> [(a, AffineTransform c)]
-runSpace = toList . runWriterT . unSpace
+runSpace :: Num c => Space c a -> [(a, AffineTransform c)]
+runSpace = toList . (`runStateT` mempty) . unSpace
 
 -- TODO put these into a MonadSpace class?
 
 transform :: Num c => AffineTransform c -> Space c ()
-transform = Space . tell
+transform = Space . modify . flip mappend
 
 translate :: Num c => V2 c -> Space c ()
 translate = transform . Transform.translate
@@ -65,7 +66,7 @@ reflect :: Num c => V2 c -> Space c ()
 reflect = transform . Transform.reflect
 
 draw :: GraphicsState -> Space GLfloat Sprite -> IO Bool
-draw !gs = Stream.draw gs . runSpace
+draw gs = Stream.draw gs . runSpace
 
 clear :: IO ()
 clear = glClear gl_COLOR_BUFFER_BIT
@@ -80,5 +81,7 @@ modulatedSprite color pos dim tex = do
 sprite :: V2 Word -> V2 Word -> Texture -> Space Int Sprite
 sprite = modulatedSprite (opaque (white :: Colour GLfloat))
 
-mapTransform :: (t -> u) -> Space t a -> Space u a
-mapTransform f = Space . WriterT . (fmap.second.fmap) f . runWriterT . unSpace
+mapTransform :: (Num t, Num u) => (t -> u) -> Space t a -> Space u a
+mapTransform f =
+  Space . StateT . (\xs a -> map (\(x, a') -> (x, a <> fmap f a')) xs) .
+  (`runStateT` mempty) . unSpace
