@@ -7,6 +7,8 @@ import Graphics.UI.GLFW (DisplayOptions (..))
 import Linear.V2
 import qualified Graphics.UI.GLFW as GLFW
 
+import Graphics.Rendering.OpenGL.Raw.Core31 (glViewport)
+
 windowWidth, windowHeight :: Num a => a
 windowWidth  = 1024
 windowHeight = 768
@@ -30,22 +32,17 @@ main = do
   windowOpened <- GLFW.openWindow displayOptions
   unless windowOpened $ error "failed to open window"
   GLFW.setWindowTitle "Wizard!"
+  glViewport 0 0 windowWidth windowHeight
   graphicsState <- initializeGraphics
   tex <- either error id <$> loadTexture Linear "examples/test/wizard/wizard.png"
-  tex2 <- either error id <$> loadTexture Nearest "examples/test/wizard/wizard.png"
   let spr1 = mapTransform fromIntegral $ sprite (V2 3 7) (V2 55 82) tex
       spr2 = mapTransform fromIntegral $ modulatedSprite ((yellowgreen :: Colour Double) `withOpacity` 0.5) (V2 2 100) (V2 52 80) tex
-      spr3 = mapTransform fromIntegral $ sprite (V2 3 7) (V2 55 82) tex2
-      spr4 = mapTransform fromIntegral $ modulatedSprite ((yellowgreen :: Colour Double) `withOpacity` 0.5) (V2 2 100) (V2 52 80) tex2
-      image x = do
+      image n = do
         scale $ V2 (recip $ windowWidth / 2) (recip $ windowHeight / 2)
-        let scaleOf1 = x / 500 + 0.25
-        translate (V2 (-250) 0) <|> return ()
-        msum $ map (\n -> scale (let y = x * n / 10000 in V2 y y)) [0..99]
-        return () <|> (translate (V2 (x/100) (x-500)) *> rotate (-x*pi/1000))
-        (translate (V2 (-x/7) 0) *> scale (V2 scaleOf1 scaleOf1) *> spr1) <|> (translate (V2 (500-x) 0) *> rotate (x*pi/500) *> scale 3 *> spr2) <|>
-          (translate (V2 0 200) *> ((translate (V2 (-x/7) 0) *> scale (V2 scaleOf1 scaleOf1) *> spr3) <|> (translate (V2 (500-x) 0) *> rotate (x*pi/500) *> scale 3 *> spr4)))
-  forM_ [0..999] $ \x -> do
+        msum $ map (\x -> scale (let y = (x+1)/75 in V2 y y) *> translate (V2 (x*5 - 250) 0) *>
+                          ((translate (V2 0 (sin (pi*x/50 + n/250) * 250)) *> spr1) <|>
+                           (translate (V2 0 (cos (pi*x/50 + n/250) * 250)) *> spr2))) [0..99]
+  forM_ [0..] $ \x -> do
     clear
     _ <- draw graphicsState $ image x
     GLFW.swapBuffers
