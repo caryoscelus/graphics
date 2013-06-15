@@ -115,7 +115,6 @@ data GraphicsState =
                 , program :: !GLuint
                 }
 
--- TODO restore the blend function
 drawChunks :: GraphicsState -> [Chunk] -> IO Bool
 drawChunks GraphicsState{..} chunks =
   saveAndRestore gl_VERTEX_ARRAY_BINDING glBindVertexArray .
@@ -123,7 +122,8 @@ drawChunks GraphicsState{..} chunks =
   saveAndRestore gl_ACTIVE_TEXTURE glActiveTexture .
   saveAndRestore gl_TEXTURE_2D (glBindTexture gl_TEXTURE_2D) .
   saveAndRestoreUnless (==0) gl_ELEMENT_ARRAY_BUFFER_BINDING (glBindBuffer gl_ELEMENT_ARRAY_BUFFER_BINDING) .
-  saveAndRestoreUnless (==0) gl_ARRAY_BUFFER_BINDING (glBindBuffer gl_ARRAY_BUFFER) $ do
+  saveAndRestoreUnless (==0) gl_ARRAY_BUFFER_BINDING (glBindBuffer gl_ARRAY_BUFFER) .
+  saveAndRestore4 gl_BLEND_SRC_RGB gl_BLEND_DST_RGB gl_BLEND_SRC_ALPHA gl_BLEND_DST_ALPHA glBlendFuncSeparate $ do
     glBindVertexArray vao
     glUseProgram program -- assume that the uniform for the sampler is already set
     glActiveTexture gl_TEXTURE0

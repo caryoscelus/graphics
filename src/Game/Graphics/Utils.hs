@@ -1,5 +1,5 @@
 {-# OPTIONS -fexpose-all-unfoldings #-}
-module Game.Graphics.Utils (ptrResult, glGen, glGet, saveAndRestore, saveAndRestoreUnless) where
+module Game.Graphics.Utils (ptrResult, glGen, glGet, saveAndRestore, saveAndRestore4, saveAndRestoreUnless) where
 
 import Control.Monad
 import Foreign.Marshal
@@ -26,3 +26,12 @@ saveAndRestoreUnless p target f m = do
   unless (p old) $ f old
   return x
   
+saveAndRestore4 :: GLenum -> GLenum -> GLenum -> GLenum -> (GLenum -> GLenum -> GLenum -> GLenum -> IO ()) -> IO a -> IO a
+saveAndRestore4 t1 t2 t3 t4 f m = do
+  o1 <- glGet t1
+  o2 <- glGet t2
+  o3 <- glGet t3
+  o4 <- glGet t4
+  x <- m
+  f o1 o2 o3 o4
+  return x
