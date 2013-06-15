@@ -89,4 +89,3 @@ sprite = modulatedSprite (opaque (white :: Colour GLfloat))
 
 mapTransform :: (Num t, Num u) => (t -> u) -> Space t a -> Space u a
 mapTransform f = space . (map.second.fmap) f . runSpace
-  

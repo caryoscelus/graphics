@@ -141,8 +141,6 @@ drawChunks GraphicsState{..} chunks =
     unless srgbWasEnabled $ glDisable gl_FRAMEBUFFER_SRGB  
     return drewCleanly
 
--- TODO indexed draws?
-
 -- | Draw the given chunk. Returns false if the draw call was skipped
 -- due to a buffer mapping error. This should be rare and temporary,
 -- so instead of trying to handle it we just report it.
