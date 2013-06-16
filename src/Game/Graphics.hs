@@ -16,17 +16,18 @@ import Control.Applicative
 import Control.Arrow
 import Control.Monad
 import Control.Monad.Fix
-import Control.Monad.Trans.Writer.Strict
 import Control.Monad.Trans.State.Strict
+import Control.Monad.Trans.Writer.Strict
 import Data.Colour
 import Data.Colour.Names (white)
 import Data.Foldable
-import Data.Traversable
 import Data.Monoid
+import Data.Traversable
 import Data.Word
 import Game.Graphics.AffineTransform (AffineTransform)
 import Game.Graphics.Sprite hiding (modulatedSprite)
 import Game.Graphics.Stream (GraphicsState, initializeGraphics)
+import Game.Graphics.Texture
 import Graphics.Rendering.OpenGL.Raw.Core31
 import Linear.V2
 

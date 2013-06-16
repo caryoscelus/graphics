@@ -1,8 +1,8 @@
 name:                graphics
 version:             0.0.0
 synopsis:            A library for working with 2D graphics
-description:         A library for working with 2D graphics with a
-                     simple semantics. This library is part of the
+description:         A simple library for working with 2D
+                     graphics. This library is part of the
                      haskell-game collection.
 homepage:            https://github.com/haskell-game
 license:             MIT
@@ -37,12 +37,16 @@ library
   other-modules:     Game.Graphics.Shader,
                      Game.Graphics.Sprite,
                      Game.Graphics.Stream,
+                     Game.Graphics.Texture,
                      Game.Graphics.Utils
   ghc-options:       -O2 -Wall
   other-extensions:  BangPatterns,
+                     DeriveDataTypeable,
                      DeriveFunctor,
                      FlexibleContexts,
                      GeneralizedNewtypeDeriving,
+                     OverloadedStrings,
+                     RankNTypes,
                      RecordWildCards,
                      ViewPatterns
 
