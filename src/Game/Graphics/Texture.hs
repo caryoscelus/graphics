@@ -1,3 +1,5 @@
+{-# OPTIONS -fexpose-all-unfoldings #-}
+{-# OPTIONS -funbox-strict-fields #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleContexts #-}
 module Game.Graphics.Texture

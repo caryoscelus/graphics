@@ -34,7 +34,8 @@ library
   hs-source-dirs:    src
   exposed-modules:   Game.Graphics.AffineTransform,
                      Game.Graphics
-  other-modules:     Game.Graphics.Shader,
+  other-modules:     Game.Graphics.Attributes,
+                     Game.Graphics.Shader,
                      Game.Graphics.Sprite,
                      Game.Graphics.Stream,
                      Game.Graphics.Texture,

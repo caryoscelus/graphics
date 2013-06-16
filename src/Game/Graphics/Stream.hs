@@ -15,86 +15,50 @@ import qualified Data.Vector.Storable as Vector
 import Foreign.Ptr
 import Foreign.Storable
 import Game.Graphics.AffineTransform
+import Game.Graphics.Attributes
 import Game.Graphics.Shader
 import Game.Graphics.Sprite
 import Game.Graphics.Utils
 import Graphics.Rendering.OpenGL.Raw.Core31
 import Linear.V2
-import Linear.V4
 
--- Attributes for a single vertex
-data Attribs =
-  Attribs { attribsPosX      :: !GLfloat
-          , attribsPosY      :: !GLfloat
-          , attribsTexX      :: !GLfloat
-          , attribsTexY      :: !GLfloat
-          , attribsModulateR :: !GLfloat
-          , attribsModulateG :: !GLfloat
-          , attribsModulateB :: !GLfloat
-          , attribsModulateA :: !GLfloat
-          } deriving Show
-
-instance Storable Attribs where
-  sizeOf    _ = sizeOf (undefined :: V2 GLfloat) * 2 +
-                sizeOf (undefined :: V4 GLfloat)
-  alignment _ = alignment (undefined :: V2 GLfloat)
-  peek (castPtr -> !ptr) =
-    Attribs           <$>
-    peek        ptr   <*>
-    peekElemOff ptr 1 <*>
-    peekElemOff ptr 2 <*>
-    peekElemOff ptr 3 <*>
-    peekElemOff ptr 4 <*>
-    peekElemOff ptr 5 <*>
-    peekElemOff ptr 6 <*>
-    peekElemOff ptr 7
-  poke (castPtr -> !ptr) Attribs{..} = do
-    poke        ptr   attribsPosX
-    pokeElemOff ptr 1 attribsPosY
-    pokeElemOff ptr 2 attribsTexX
-    pokeElemOff ptr 3 attribsTexY
-    pokeElemOff ptr 4 attribsModulateR
-    pokeElemOff ptr 5 attribsModulateG
-    pokeElemOff ptr 6 attribsModulateB
-    pokeElemOff ptr 7 attribsModulateA
-    
 -- Attributes for a quad.
-data QuadAttribs =
-  QuadAttribs { upperLeft  :: !Attribs
-              , upperRight :: !Attribs
-              , lowerLeft  :: !Attribs
-              , lowerRight :: !Attribs
-              } deriving Show
+data QuadAttributes =
+  QuadAttributes { upperLeft  :: !Attributes
+                 , upperRight :: !Attributes
+                 , lowerLeft  :: !Attributes
+                 , lowerRight :: !Attributes
+                 } deriving Show
 
-instance Storable QuadAttribs where
-  sizeOf    _ = sizeOf    (undefined :: Attribs) * 4
-  alignment _ = alignment (undefined :: Attribs)
-  peek (castPtr -> !ptr) = QuadAttribs <$> peek ptr <*> peekElemOff ptr 1 <*> peekElemOff ptr 2 <*> peekElemOff ptr 3
-  poke (castPtr -> !ptr) QuadAttribs{..} = do
+instance Storable QuadAttributes where
+  sizeOf    _ = sizeOf    (undefined :: Attributes) * 4
+  alignment _ = alignment (undefined :: Attributes)
+  peek (castPtr -> !ptr) = QuadAttributes <$> peek ptr <*> peekElemOff ptr 1 <*> peekElemOff ptr 2 <*> peekElemOff ptr 3
+  poke (castPtr -> !ptr) QuadAttributes{..} = do
     poke ptr upperLeft
     pokeElemOff ptr 1 upperRight
     pokeElemOff ptr 2 lowerLeft
     pokeElemOff ptr 3 lowerRight
 
-spriteAttribs :: Sprite -> AffineTransform GLfloat -> QuadAttribs
-spriteAttribs Sprite{..} !t =
-  QuadAttribs
-   (Attribs ulx uly spriteLeft  spriteTop    spriteModulateR spriteModulateG spriteModulateB spriteModulateA)
-   (Attribs urx ury spriteRight spriteTop    spriteModulateR spriteModulateG spriteModulateB spriteModulateA)
-   (Attribs llx lly spriteLeft  spriteBottom spriteModulateR spriteModulateG spriteModulateB spriteModulateA)
-   (Attribs lrx lry spriteRight spriteBottom spriteModulateR spriteModulateG spriteModulateB spriteModulateA)
+spriteAttributes :: Sprite -> AffineTransform GLfloat -> QuadAttributes
+spriteAttributes Sprite{..} !t =
+  QuadAttributes
+   (Attributes ulx uly spriteLeft  spriteTop    spriteModulateR spriteModulateG spriteModulateB spriteModulateA)
+   (Attributes urx ury spriteRight spriteTop    spriteModulateR spriteModulateG spriteModulateB spriteModulateA)
+   (Attributes llx lly spriteLeft  spriteBottom spriteModulateR spriteModulateG spriteModulateB spriteModulateA)
+   (Attributes lrx lry spriteRight spriteBottom spriteModulateR spriteModulateG spriteModulateB spriteModulateA)
   where (V2 !llx !lly, V2 !ulx !uly, V2 !lrx !lry, V2 !urx !ury) = applyFourCorners01 t
 
 bufferBytes :: Num a => a
 bufferBytes = 4*1024*1024
 
 bufferLen :: Int
-bufferLen = bufferBytes `div` sizeOf (undefined :: QuadAttribs)
+bufferLen = bufferBytes `div` sizeOf (undefined :: QuadAttributes)
 
 data Chunk =
   Chunk { chunkOffset :: !Int
         , chunkTexId  :: !GLuint
-        , chunkQuads  :: ![QuadAttribs]
+        , chunkQuads  :: ![QuadAttributes]
         } deriving Show
 
 -- Given a list of sprites to draw, divide it into chunks, each of
@@ -104,7 +68,7 @@ data Chunk =
 chunksToDraw :: [(Sprite, AffineTransform GLfloat)] -> [Chunk]
 chunksToDraw =
   map (\xs@((i, (s, _)):_) -> Chunk i (spriteTexId s) $
-                              map (uncurry spriteAttribs . snd) xs) .
+                              map (uncurry spriteAttributes . snd) xs) .
   groupBy (\(_,(x,_)) (j,(y,_)) -> spriteTexId x == spriteTexId y && j /= 0) .
   zip (cycle [0..bufferLen-1])
 
@@ -146,8 +110,8 @@ drawChunks GraphicsState{..} chunks =
 -- so instead of trying to handle it we just report it.
 drawChunk :: Chunk -> IO Bool
 drawChunk Chunk{..} = do
-  let !offsetBytes = fromIntegral $ chunkOffset * sizeOf (undefined :: QuadAttribs)
-      !rangeBytes = (bufferLen - chunkOffset)   * sizeOf (undefined :: QuadAttribs)
+  let !offsetBytes = fromIntegral $ chunkOffset * sizeOf (undefined :: QuadAttributes)
+      !rangeBytes = (bufferLen - chunkOffset)   * sizeOf (undefined :: QuadAttributes)
       !invalidateBufferBit
         | chunkOffset == 0 = gl_MAP_INVALIDATE_BUFFER_BIT
         | otherwise        = 0
@@ -160,7 +124,7 @@ drawChunk Chunk{..} = do
           invalidateBufferBit
   !flushCount <- foldM (\off quad -> off + 1 <$ pokeElemOff ptr off quad) 0 chunkQuads
   glFlushMappedBufferRange gl_ARRAY_BUFFER 0 . fromIntegral $
-    flushCount * sizeOf (undefined :: QuadAttribs)
+    flushCount * sizeOf (undefined :: QuadAttributes)
   unmapSuccess <- glUnmapBuffer gl_ARRAY_BUFFER
   let !shouldDraw = unmapSuccess == fromIntegral gl_TRUE
   when shouldDraw $ glDrawElements gl_TRIANGLES (fromIntegral flushCount * 6)
@@ -239,12 +203,12 @@ initializeGraphics =
                       glGetAttribLocation prog . castPtr
 
     glVertexAttribPointer vPosition 2 gl_FLOAT (fromIntegral gl_FALSE)
-      (fromIntegral $ sizeOf (undefined :: Attribs)) $ intPtrToPtr 0
+      (fromIntegral $ sizeOf (undefined :: Attributes)) $ intPtrToPtr 0
     glVertexAttribPointer vTexPosition 2 gl_FLOAT (fromIntegral gl_FALSE)
-      (fromIntegral $ sizeOf (undefined :: Attribs)) . intPtrToPtr .
+      (fromIntegral $ sizeOf (undefined :: Attributes)) . intPtrToPtr .
       fromIntegral $ sizeOf (undefined :: V2 GLfloat)
     glVertexAttribPointer vModulateColor 4 gl_FLOAT (fromIntegral gl_FALSE)
-      (fromIntegral $ sizeOf (undefined :: Attribs)) . intPtrToPtr .
+      (fromIntegral $ sizeOf (undefined :: Attributes)) . intPtrToPtr .
       fromIntegral $ sizeOf (undefined :: V2 GLfloat) * 2
 
     glEnableVertexAttribArray vPosition
