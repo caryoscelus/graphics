@@ -5,7 +5,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns #-}
-module Game.Graphics.Triangles where
+module Game.Graphics.Triangles (GraphicsState (), Triangles (), draw, applyTransform, sprite, initializeGraphics) where
 
 import Control.Applicative
 import Control.Lens (traverse, toListOf, maximumOf, minimumOf)
@@ -98,18 +98,7 @@ bufferBytes :: Num a => a
 bufferBytes = 4*1024*1024
 
 drawTriangles :: Int -> Int -> Triangles -> IO Bool
-drawTriangles elemOffsetBytes arrayOffsetBytes Triangles{..} = do
-  maybeElemCount <- writeData gl_ELEMENT_ARRAY_BUFFER elemOffsetBytes  triIndices
-  maybeAttrCount <- writeData gl_ARRAY_BUFFER         arrayOffsetBytes triAttributes
-  case (maybeElemCount, maybeAttrCount) of
-    (Just elemCount, Just _attrCount) -> do
-      glBindTexture gl_TEXTURE_2D triTexId
-      glDrawElements gl_TRIANGLES (fromIntegral elemCount) gl_UNSIGNED_INT . intPtrToPtr $ fromIntegral elemOffsetBytes
-      return True
-    _ -> return False
-
-drawTriangles' :: Int -> Int -> Triangles -> IO Bool
-drawTriangles' elemOffset arrayOffset Triangles{..} = do
+drawTriangles elemOffset arrayOffset Triangles{..} = do
   let elemOffsetBytes = elemOffset * sizeOf (undefined :: GLuint)
   maybeElemCount <- writeData gl_ELEMENT_ARRAY_BUFFER elemOffsetBytes                                  triIndices
   maybeAttrCount <- writeData gl_ARRAY_BUFFER         (arrayOffset * sizeOf (undefined :: Attributes)) triAttributes
@@ -137,9 +126,9 @@ writeData target offsetBytes xs = do
   success <- glUnmapBuffer target
   return $! if success == fromIntegral gl_TRUE then Just count else Nothing
 
-chunksToDraw' :: [Triangles] -> [(Int, Int, Triangles)]
-chunksToDraw' []     = []
-chunksToDraw' (x:xs) =
+chunksToDraw :: [Triangles] -> [(Int, Int, Triangles)]
+chunksToDraw []     = []
+chunksToDraw (x:xs) =
   map (regroup . unzip3) $
   groupBy (\(_, _, t) (elemOff, attrOff, u) -> triTexId t == triTexId u && elemOff /= 0 && attrOff /= 0) $
   scanl accumOffsets (0, 0, x) xs
@@ -158,30 +147,6 @@ chunksToDraw' (x:xs) =
                              (Vector.concat $ triIndices <$> ts)
                              (Vector.concat $ triAttributes <$> ts))
         regroup _ = error "BUG in chunksToDraw"
-        offsetElems (fromIntegral -> off) tri = tri { triIndices = Vector.map (+off) $ triIndices tri }
-
-chunksToDraw :: [Triangles] -> [(Int, Int, Triangles)]
-chunksToDraw []     = []
-chunksToDraw (x:xs) =
-  map (regroup . unzip3) $
-  groupBy (\(_, _, t) (elemOff, attrOff, u) -> triTexId t == triTexId u && elemOff /= 0 && attrOff /= 0) $
-  scanl accumOffsets (0, 0, x) xs
-  where accumOffsets (prevElemOff, prevAttrOff, prev) t =
-          let !prevElemSize = indexBytes prev
-              !prevAttrSize = attributeBytes prev
-              !elemOff' = prevElemOff + prevElemSize
-              !attrOff' = prevAttrOff + prevAttrSize
-              !elemOff | elemOff' + indexBytes t > bufferBytes = 0
-                       | otherwise = elemOff'
-              !attrOff | attrOff' + attributeBytes t > bufferBytes = 0
-                       | otherwise = attrOff'
-          in (elemOff, attrOff, offsetElems attrOff t)
-        regroup (elemOff:_, attrOff:_, ts@(t:_)) =
-          (elemOff, attrOff, Triangles (triTexId t)
-                             (Vector.concat $ triIndices <$> ts)
-                             (Vector.concat $ triAttributes <$> ts))
-        regroup _ = error "BUG in chunksToDraw"
-        -- BUG off is in bytes, but we want it to be in elems
         offsetElems (fromIntegral -> off) tri = tri { triIndices = Vector.map (+off) $ triIndices tri }
 
 data GraphicsState =
@@ -213,8 +178,8 @@ draw GraphicsState{..} tris =
     glEnable gl_BLEND
 
     drewCleanly <- foldM (\ !success (elemOff, attrOff, ts) ->
-                           (&&success) <$> drawTriangles' elemOff attrOff ts)
-                   True $ chunksToDraw' tris
+                           (&&success) <$> drawTriangles elemOff attrOff ts)
+                   True $ chunksToDraw tris
 
     unless srgbWasEnabled $ glDisable gl_FRAMEBUFFER_SRGB  
     return drewCleanly
