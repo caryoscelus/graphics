@@ -9,6 +9,8 @@ import Control.Applicative
 import Foreign.Ptr
 import Foreign.Storable
 import Graphics.Rendering.OpenGL.Raw.Core31
+import Game.Graphics.AffineTransform
+import Linear.V2
 
 -- Attributes for a single vertex
 data Attributes =
@@ -44,3 +46,7 @@ instance Storable Attributes where
     pokeElemOff ptr 5 attribsModulateG
     pokeElemOff ptr 6 attribsModulateB
     pokeElemOff ptr 7 attribsModulateA
+
+applyTransform :: AffineTransform GLfloat -> Attributes -> Attributes
+applyTransform t attrs = attrs { attribsPosX = x, attribsPosY = y }
+  where V2 x y = apply t $ V2 (attribsPosX attrs) (attribsPosY attrs)

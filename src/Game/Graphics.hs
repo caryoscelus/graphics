@@ -9,7 +9,7 @@ module Game.Graphics
        , Sampling (..), Texture ()
        , texture, texturePremultiplied, loadTexture, loadTexturePremultiplied
        , Sprite (), sprite, modulatedSprite
-       , GraphicsState (), initializeGraphics, draw, clear
+       , GraphicsState (), Triangles.initializeGraphics, draw, clear
        ) where
 
 import Control.Applicative
@@ -23,17 +23,14 @@ import Data.Colour.Names (white)
 import Data.Foldable
 import Data.Monoid
 import Data.Traversable
-import Data.Word
 import Game.Graphics.AffineTransform (AffineTransform)
-import Game.Graphics.Sprite hiding (modulatedSprite)
-import Game.Graphics.Stream (GraphicsState, initializeGraphics)
+import Game.Graphics.Triangles (GraphicsState)
 import Game.Graphics.Texture
 import Graphics.Rendering.OpenGL.Raw.Core31
 import Linear.V2
 
 import qualified Game.Graphics.AffineTransform as Transform
-import qualified Game.Graphics.Sprite          as Sprite
-import qualified Game.Graphics.Stream          as Stream
+import qualified Game.Graphics.Triangles as Triangles
 
 newtype Space c a = Space { unSpace :: StateT (AffineTransform c) [] a }
                   deriving ( Functor, Applicative , Alternative, Monad
@@ -72,20 +69,18 @@ shear = transform . Transform.shear
 reflect :: Num c => V2 c -> Space c ()
 reflect = transform . Transform.reflect
 
+type Sprite = Triangles.Triangles
+
 draw :: GraphicsState -> Space GLfloat Sprite -> IO Bool
-draw gs = Stream.draw gs . runSpace
+draw gs = Triangles.draw gs . map (uncurry $ flip Triangles.applyTransform) . runSpace
 
 clear :: IO ()
 clear = glClear gl_COLOR_BUFFER_BIT
 
-modulatedSprite :: Real a => AlphaColour a -> V2 Word -> V2 Word -> Texture -> Space Int Sprite
-modulatedSprite color pos dim tex = do
-  translate (V2 (-w `div` 2) (-h `div` 2))
-  scale (V2 w h)
-  return $! Sprite.modulatedSprite color pos dim tex
-  where V2 w h = fmap fromIntegral dim
+modulatedSprite :: Real a => AlphaColour a -> V2 Int -> V2 Int -> Texture -> Space Int Sprite
+modulatedSprite color pos dim tex = return $! Triangles.sprite tex color pos dim
 
-sprite :: V2 Word -> V2 Word -> Texture -> Space Int Sprite
+sprite :: V2 Int -> V2 Int -> Texture -> Space Int Sprite
 sprite = modulatedSprite (opaque (white :: Colour GLfloat))
 
 mapTransform :: (Num t, Num u) => (t -> u) -> Space t a -> Space u a
