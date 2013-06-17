@@ -38,6 +38,8 @@ data Triangles =
             , triAttributes :: !(Vector Attributes)
             } deriving Show
 
+-- TODO This function is entered a lot, consuming a lot of CPU
+-- time. Optimize or use less somehow.
 applyTransform :: AffineTransform GLfloat -> Triangles -> Triangles
 applyTransform trans tris =
   tris { triAttributes = Vector.map (Attributes.applyTransform trans) $
@@ -66,22 +68,22 @@ triangles :: Real a => Texture -> AlphaColour a -> [V3 (V2 Int)] -> Triangles
 triangles tex _ [] = Triangles (texId tex) Vector.empty Vector.empty
 triangles tex (alphaColourConvert -> color) tris =
   Triangles (texId tex) (Vector.map fromIntegral $ Vector.fromList ixs) attrs
-  where (verts, ixs) = inferIndices $ toListOf (traverse.traverse) tris
-        minX = fromJust $ minimumOf (traverse._x) verts
-        maxX = fromJust $ maximumOf (traverse._x) verts
-        minY = fromJust $ minimumOf (traverse._y) verts
-        maxY = fromJust $ maximumOf (traverse._y) verts
-        offsetX = minX + (maxX-minX) `div` 2
-        offsetY = minY + (maxY-minY) `div` 2
-        alpha = alphaChannel color
-        RGB red green blue = toRGB $ color `Colour.over` black
+  where (!verts, !ixs) = inferIndices $ toListOf (traverse.traverse) tris
+        !minX = fromJust $ minimumOf (traverse._x) verts
+        !maxX = fromJust $ maximumOf (traverse._x) verts
+        !minY = fromJust $ minimumOf (traverse._y) verts
+        !maxY = fromJust $ maximumOf (traverse._y) verts
+        !offsetX = minX + (maxX-minX) `div` 2
+        !offsetY = minY + (maxY-minY) `div` 2
+        !alpha = alphaChannel color
+        RGB !red !green !blue = toRGB $ color `Colour.over` black
         mkAttrs (V2 texX texY) =
           Attributes
           (fromIntegral $ texX - offsetX) (fromIntegral . negate $ texY - offsetY)
           (fromIntegral texX / texW) (fromIntegral texY / texH)
           red green blue alpha
-        attrs = Vector.fromList $ map mkAttrs verts
-        V2 texW texH = fromIntegral <$> texSize tex
+        !attrs = Vector.fromList $ map mkAttrs verts
+        V2 !texW !texH = fromIntegral <$> texSize tex
 
 -- | @sprite texture color upperLeft dimensions@
 sprite :: Real a => Texture -> AlphaColour a -> V2 Int -> V2 Int -> Triangles
@@ -89,21 +91,21 @@ sprite tex color (V2 x y) (V2 w h) =
   triangles tex color [ V3 (V2 l t) (V2 l b) (V2 r t)
                       , V3 (V2 r t) (V2 l b) (V2 r b)
                       ]
-  where t = y
-        r = x + w - 1
-        b = y + h - 1
-        l = x
+  where !t = y
+        !r = x + w - 1
+        !b = y + h - 1
+        !l = x
 
 bufferBytes :: Num a => a
 bufferBytes = 4*1024*1024
 
 drawTriangles :: Int -> Int -> Triangles -> IO Bool
 drawTriangles elemOffset arrayOffset Triangles{..} = do
-  let elemOffsetBytes = elemOffset * sizeOf (undefined :: GLuint)
+  let !elemOffsetBytes = elemOffset * sizeOf (undefined :: GLuint)
   maybeElemCount <- writeData gl_ELEMENT_ARRAY_BUFFER elemOffsetBytes                                  triIndices
   maybeAttrCount <- writeData gl_ARRAY_BUFFER         (arrayOffset * sizeOf (undefined :: Attributes)) triAttributes
   case (maybeElemCount, maybeAttrCount) of
-    (Just elemCount, Just _attrCount) -> do
+    (Just !elemCount, Just _attrCount) -> do
       glBindTexture gl_TEXTURE_2D triTexId
       glDrawElements gl_TRIANGLES (fromIntegral elemCount) gl_UNSIGNED_INT . intPtrToPtr $ fromIntegral elemOffsetBytes
       return True
@@ -111,8 +113,8 @@ drawTriangles elemOffset arrayOffset Triangles{..} = do
 
 writeData :: forall a. (Show a, Storable a) => GLenum -> Int -> Vector a -> IO (Maybe Int)
 writeData target offsetBytes xs = do
-  let rangeBytes = bufferBytes - offsetBytes
-      invalidateBufferBit
+  let !rangeBytes = bufferBytes - offsetBytes
+      !invalidateBufferBit
         | offsetBytes == 0 = gl_MAP_INVALIDATE_BUFFER_BIT
         | otherwise        = 0
   ptr <- glMapBufferRange target (fromIntegral offsetBytes) (fromIntegral rangeBytes) $
@@ -121,7 +123,7 @@ writeData target offsetBytes xs = do
          gl_MAP_FLUSH_EXPLICIT_BIT   .|.
          gl_MAP_UNSYNCHRONIZED_BIT   .|.
          invalidateBufferBit
-  count <- Vector.foldM' (\ix x -> ix+1 <$ pokeElemOff ptr ix x) 0 xs
+  !count <- Vector.foldM' (\ix x -> ix+1 <$ pokeElemOff ptr ix x) 0 xs
   glFlushMappedBufferRange target 0 . fromIntegral $ count * sizeOf (undefined :: a)
   success <- glUnmapBuffer target
   return $! if success == fromIntegral gl_TRUE then Just count else Nothing
@@ -130,9 +132,9 @@ chunksToDraw :: [Triangles] -> [(Int, Int, Triangles)]
 chunksToDraw []     = []
 chunksToDraw (x:xs) =
   map (regroup . unzip3) $
-  groupBy (\(_, _, t) (elemOff, attrOff, u) -> triTexId t == triTexId u && elemOff /= 0 && attrOff /= 0) $
+  groupBy (\(_, _, !t) (!elemOff, !attrOff, !u) -> triTexId t == triTexId u && elemOff /= 0 && attrOff /= 0) $
   scanl accumOffsets (0, 0, x) xs
-  where accumOffsets (prevElemOff, prevAttrOff, prev) t =
+  where accumOffsets (!prevElemOff, !prevAttrOff, !prev) t =
           let !prevElemCount = Vector.length $ triIndices prev
               !prevAttrCount = Vector.length $ triAttributes prev
               !elemOff' = prevElemOff + prevElemCount
@@ -142,12 +144,13 @@ chunksToDraw (x:xs) =
               !attrOff | attrOff' + attributeBytes t > bufferBytes = 0
                        | otherwise = attrOff'
           in (elemOff, attrOff, offsetElems attrOff t)
-        regroup (elemOff:_, attrOff:_, ts@(t:_)) =
+        -- TODO regroup is a major allocator. optimize this somehow
+        regroup (!elemOff:_, !attrOff:_, ts@(t:_)) =
           (elemOff, attrOff, Triangles (triTexId t)
                              (Vector.concat $ triIndices <$> ts)
                              (Vector.concat $ triAttributes <$> ts))
         regroup _ = error "BUG in chunksToDraw"
-        offsetElems (fromIntegral -> off) tri = tri { triIndices = Vector.map (+off) $ triIndices tri }
+        offsetElems (fromIntegral -> !off) tri = tri { triIndices = Vector.map (+off) $ triIndices tri }
 
 data GraphicsState =
   GraphicsState { vbo     :: !GLuint
@@ -177,9 +180,9 @@ draw GraphicsState{..} tris =
     glBlendFunc gl_ONE gl_ONE_MINUS_SRC_ALPHA
     glEnable gl_BLEND
 
-    drewCleanly <- foldM (\ !success (elemOff, attrOff, ts) ->
-                           (&&success) <$> drawTriangles elemOff attrOff ts)
-                   True $ chunksToDraw tris
+    !drewCleanly <- foldM (\ !success (elemOff, attrOff, ts) ->
+                            (&&success) <$> drawTriangles elemOff attrOff ts)
+                    True $ chunksToDraw tris
 
     unless srgbWasEnabled $ glDisable gl_FRAMEBUFFER_SRGB  
     return drewCleanly

@@ -31,6 +31,10 @@ instance Num a => Monoid (AffineTransform a) where
   {-# INLINE mempty #-}
   mempty = A2D 1 0 0
                0 1 0
+  -- TODO mappend is currently the largest source of allocations, most
+  -- of which presumably could be avoided with unboxed fields. I think
+  -- this has been bad enough that I'm willing to sacrifice some
+  -- polymorphism for it
   {-# INLINE mappend #-}
   A2D a11 a12 a13
       a21 a22 a23 `mappend` A2D b11 b12 b13
