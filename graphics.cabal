@@ -53,7 +53,7 @@ library
                      RecordWildCards,
                      ViewPatterns
 
-executable test
+executable example1
   if !flag(examples)
     buildable:       False
   build-depends:     base >= 4.5 && < 4.7,
@@ -64,7 +64,7 @@ executable test
                      graphics == 0.0.0,
                      time == 1.4.*
   default-language:  Haskell2010
-  hs-source-dirs:    examples/test
+  hs-source-dirs:    examples/example1
   main-is:           Main.hs
   ghc-options:       -O2 -Wall
 
