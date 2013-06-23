@@ -27,6 +27,7 @@ library
                      colour == 2.3.*,
                      lens == 3.9.*,
                      linear == 1.1.*,
+                     mtl == 2.1.*,
                      JuicyPixels == 3.0.*,
                      OpenGLRaw == 1.3.*,
                      transformers == 0.3.*,
@@ -35,7 +36,8 @@ library
   hs-source-dirs:    src
   exposed-modules:   Game.Graphics.AffineTransform,
                      Game.Graphics
-  other-modules:     Game.Graphics.Attributes,
+  other-modules:     Control.Monad.Trans.Writer.Stricter,
+                     Game.Graphics.Attributes,
                      Game.Graphics.Shader,
                      Game.Graphics.Texture,
                      Game.Graphics.Triangles,
@@ -65,3 +67,24 @@ executable test
   hs-source-dirs:    examples/test
   main-is:           Main.hs
   ghc-options:       -O2 -Wall
+
+test-suite tests
+  build-depends:     base >= 4.5 && < 4.7,
+                     bytestring == 0.10.*,
+                     colour == 2.3.*,
+                     lens == 3.9.*,
+                     linear == 1.1.*,
+                     mtl == 2.1.*,
+                     JuicyPixels == 3.0.*,
+                     OpenGLRaw == 1.3.*,
+                     transformers == 0.3.*,
+                     vector == 0.10.*,
+                     QuickCheck == 2.5.*,
+                     test-framework == 0.8.*,
+                     test-framework-quickcheck2 == 0.3.*
+  default-language:  Haskell2010
+  type:              exitcode-stdio-1.0
+  main-is:           Main.hs
+  hs-source-dirs:    src, test
+  cpp-options:       -DENABLE_TESTS
+  ghc-options:       -Wall

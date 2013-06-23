@@ -16,12 +16,10 @@ import Control.Applicative
 import Control.Arrow
 import Control.Monad
 import Control.Monad.Fix
-import Control.Monad.Trans.State.Strict
-import Control.Monad.Trans.Writer.Strict
+import Control.Monad.Trans.Writer.Stricter
 import Data.Colour
 import Data.Colour.Names (white)
 import Data.Foldable
-import Data.Monoid
 import Data.Traversable
 import Game.Graphics.AffineTransform (AffineTransform)
 import Game.Graphics.Triangles (GraphicsState)
@@ -32,27 +30,21 @@ import Linear.V2
 import qualified Game.Graphics.AffineTransform as Transform
 import qualified Game.Graphics.Triangles as Triangles
 
-newtype Space c a = Space { unSpace :: StateT (AffineTransform c) [] a }
-                  deriving ( Functor, Applicative , Alternative, Monad
-                           , MonadPlus, MonadFix
+newtype Space c a = Space { unSpace :: WriterT (AffineTransform c) [] a }
+                  deriving ( Functor, Applicative, Alternative, Monad
+                           , MonadPlus, MonadFix, Foldable, Traversable
                            )
 
-instance Num c => Foldable (Space c) where
-  foldMap f = foldMap (f . fst) . runSpace
-
-instance Num c => Traversable (Space c) where
-  traverse f = fmap (space . runWriterT) . traverse f . WriterT . runSpace
-
 space :: Num c => [(a, AffineTransform c)] -> Space c a
-space xs = Space . StateT $ \a -> (map.second) (a <>) xs
+space = Space . writerT
 
 runSpace :: Num c => Space c a -> [(a, AffineTransform c)]
-runSpace = (`runStateT` mempty) . unSpace
+runSpace = runWriterT . unSpace
 
 -- TODO put these into a MonadSpace class?
 
 transform :: Num c => AffineTransform c -> Space c ()
-transform = Space . modify . flip mappend
+transform = Space . tell
 
 translate :: Num c => V2 c -> Space c ()
 translate = transform . Transform.translate
