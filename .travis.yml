@@ -3,5 +3,8 @@ language: haskell
 notifications:
   irc: "irc.freenode.org#haskell-game"
 
+install:
+  cabal install --only-dependencies --enable-tests --force-reinstalls
+
 script:
   cabal configure --enable-tests -fexamples && cabal build && cabal test
