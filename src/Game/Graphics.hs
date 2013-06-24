@@ -9,6 +9,7 @@ module Game.Graphics
        , texture, texturePremultiplied, loadTexture, loadTexturePremultiplied
        , Sprite (), sprite, modulatedSprite
        , GraphicsState (), Triangles.initializeGraphics, draw, clear
+       , GLfloat, glViewport
        ) where
 
 import Control.Applicative

@@ -7,8 +7,6 @@ import Graphics.UI.GLFW (DisplayOptions (..))
 import Linear.V2
 import qualified Graphics.UI.GLFW as GLFW
 
-import Graphics.Rendering.OpenGL.Raw.Core31 (glViewport)
-
 windowWidth, windowHeight :: Num a => a
 windowWidth  = 1024
 windowHeight = 768
