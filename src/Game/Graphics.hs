@@ -4,7 +4,6 @@
 {-# LANGUAGE RecordWildCards #-}
 module Game.Graphics
        ( Space ()
-       , mapTransform
        , transform, translate, rotate, scale, shear, reflect
        , Sampling (..), Texture ()
        , texture, texturePremultiplied, loadTexture, loadTexturePremultiplied
@@ -13,7 +12,6 @@ module Game.Graphics
        ) where
 
 import Control.Applicative
-import Control.Arrow
 import Control.Monad
 import Control.Monad.Fix
 import Control.Monad.Trans.Writer.Stricter
@@ -30,48 +28,44 @@ import Linear.V2
 import qualified Game.Graphics.AffineTransform as Transform
 import qualified Game.Graphics.Triangles as Triangles
 
-newtype Space c a = Space { unSpace :: WriterT (AffineTransform c) [] a }
-                  deriving ( Functor, Applicative, Alternative, Monad
-                           , MonadPlus, MonadFix, Foldable, Traversable
-                           )
+newtype Space a = Space { unSpace :: WriterT AffineTransform [] a }
+                deriving ( Functor, Applicative, Alternative, Monad
+                         , MonadPlus, MonadFix, Foldable, Traversable
+                         )
 
-space :: Num c => [(a, AffineTransform c)] -> Space c a
-{-# INLINE space #-}
-space = Space . writerT
-
-runSpace :: Num c => Space c a -> [(a, AffineTransform c)]
+runSpace :: Space a -> [(a, AffineTransform)]
 {-# INLINE runSpace #-}
 runSpace = runWriterT . unSpace
 
 -- TODO put these into a MonadSpace class?
 
-transform :: Num c => AffineTransform c -> Space c ()
+transform :: AffineTransform -> Space ()
 {-# INLINE transform #-}
 transform = Space . tell
 
-translate :: Num c => V2 c -> Space c ()
+translate :: V2 GLfloat -> Space ()
 {-# INLINE translate #-}
 translate = transform . Transform.translate
 
-rotate :: Floating c => c -> Space c ()
+rotate :: GLfloat -> Space ()
 {-# INLINE rotate #-}
 rotate = transform . Transform.rotate
 
-scale :: Num c => V2 c -> Space c ()
+scale :: V2 GLfloat -> Space ()
 {-# INLINE scale #-}
 scale = transform . Transform.scale
 
-shear :: Num c => V2 c -> Space c ()
+shear :: V2 GLfloat -> Space ()
 {-# INLINE shear #-}
 shear = transform . Transform.shear
 
-reflect :: Num c => V2 c -> Space c ()
+reflect :: V2 GLfloat -> Space ()
 {-# INLINE reflect #-}
 reflect = transform . Transform.reflect
 
 type Sprite = Triangles.Triangles
 
-draw :: GraphicsState -> Space GLfloat Sprite -> IO Bool
+draw :: GraphicsState -> Space Sprite -> IO Bool
 {-# INLINE draw #-}
 draw gs = Triangles.draw gs . map (uncurry $ flip Triangles.applyTransform) . runSpace
 
@@ -79,14 +73,10 @@ clear :: IO ()
 {-# INLINE clear #-}
 clear = glClear gl_COLOR_BUFFER_BIT
 
-modulatedSprite :: Real a => AlphaColour a -> V2 Int -> V2 Int -> Texture -> Space Int Sprite
+modulatedSprite :: Real a => AlphaColour a -> V2 Int -> V2 Int -> Texture -> Space Sprite
 {-# INLINE modulatedSprite #-}
 modulatedSprite color pos dim tex = return $! Triangles.sprite tex color pos dim
 
-sprite :: V2 Int -> V2 Int -> Texture -> Space Int Sprite
+sprite :: V2 Int -> V2 Int -> Texture -> Space Sprite
 {-# INLINE sprite #-}
 sprite = modulatedSprite (opaque (white :: Colour GLfloat))
-
-mapTransform :: (Num t, Num u) => (t -> u) -> Space t a -> Space u a
-{-# INLINE mapTransform #-}
-mapTransform f = space . (map.second.fmap) f . runSpace

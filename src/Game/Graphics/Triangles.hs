@@ -40,7 +40,7 @@ data Triangles =
 
 -- TODO This function is entered a lot, consuming a lot of CPU
 -- time. Optimize or use less somehow.
-applyTransform :: AffineTransform GLfloat -> Triangles -> Triangles
+applyTransform :: AffineTransform -> Triangles -> Triangles
 {-# INLINE applyTransform #-}
 applyTransform trans tris =
   tris { triAttributes = Vector.map (Attributes.applyTransform trans) $

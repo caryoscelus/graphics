@@ -36,8 +36,8 @@ main = do
   glViewport 0 0 windowWidth windowHeight
   graphicsState <- initializeGraphics
   tex <- either error id <$> loadTexture Linear "examples/example1/wizard/wizard.png"
-  let spr1 = mapTransform fromIntegral $ sprite (V2 3 7) (V2 55 82) tex
-      spr2 = mapTransform fromIntegral $ modulatedSprite ((yellowgreen :: Colour Double) `withOpacity` 0.5) (V2 2 100) (V2 52 80) tex
+  let spr1 = sprite (V2 3 7) (V2 55 82) tex
+      spr2 = modulatedSprite ((yellowgreen :: Colour Double) `withOpacity` 0.5) (V2 2 100) (V2 52 80) tex
       image n = do
         scale $ V2 (recip $ windowWidth / 2) (recip $ windowHeight / 2)
         msum $ map (\x -> scale (let y = (x+1)/75 in V2 y y) *> translate (V2 (x*5 - 250) 0) *>
