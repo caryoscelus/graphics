@@ -36,44 +36,57 @@ newtype Space c a = Space { unSpace :: WriterT (AffineTransform c) [] a }
                            )
 
 space :: Num c => [(a, AffineTransform c)] -> Space c a
+{-# INLINE space #-}
 space = Space . writerT
 
 runSpace :: Num c => Space c a -> [(a, AffineTransform c)]
+{-# INLINE runSpace #-}
 runSpace = runWriterT . unSpace
 
 -- TODO put these into a MonadSpace class?
 
 transform :: Num c => AffineTransform c -> Space c ()
+{-# INLINE transform #-}
 transform = Space . tell
 
 translate :: Num c => V2 c -> Space c ()
+{-# INLINE translate #-}
 translate = transform . Transform.translate
 
 rotate :: Floating c => c -> Space c ()
+{-# INLINE rotate #-}
 rotate = transform . Transform.rotate
 
 scale :: Num c => V2 c -> Space c ()
+{-# INLINE scale #-}
 scale = transform . Transform.scale
 
 shear :: Num c => V2 c -> Space c ()
+{-# INLINE shear #-}
 shear = transform . Transform.shear
 
 reflect :: Num c => V2 c -> Space c ()
+{-# INLINE reflect #-}
 reflect = transform . Transform.reflect
 
 type Sprite = Triangles.Triangles
 
 draw :: GraphicsState -> Space GLfloat Sprite -> IO Bool
+{-# INLINE draw #-}
 draw gs = Triangles.draw gs . map (uncurry $ flip Triangles.applyTransform) . runSpace
 
 clear :: IO ()
+{-# INLINE clear #-}
 clear = glClear gl_COLOR_BUFFER_BIT
 
 modulatedSprite :: Real a => AlphaColour a -> V2 Int -> V2 Int -> Texture -> Space Int Sprite
+{-# INLINE modulatedSprite #-}
 modulatedSprite color pos dim tex = return $! Triangles.sprite tex color pos dim
 
 sprite :: V2 Int -> V2 Int -> Texture -> Space Int Sprite
+{-# INLINE sprite #-}
 sprite = modulatedSprite (opaque (white :: Colour GLfloat))
 
 mapTransform :: (Num t, Num u) => (t -> u) -> Space t a -> Space u a
+{-# INLINE mapTransform #-}
 mapTransform f = space . (map.second.fmap) f . runSpace

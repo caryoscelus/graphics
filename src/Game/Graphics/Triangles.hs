@@ -41,6 +41,7 @@ data Triangles =
 -- TODO This function is entered a lot, consuming a lot of CPU
 -- time. Optimize or use less somehow.
 applyTransform :: AffineTransform GLfloat -> Triangles -> Triangles
+{-# INLINE applyTransform #-}
 applyTransform trans tris =
   tris { triAttributes = Vector.map (Attributes.applyTransform trans) $
                          triAttributes tris }
@@ -145,6 +146,7 @@ chunksToDraw (x:xs) =
                        | otherwise = attrOff'
           in (elemOff, attrOff, offsetElems attrOff t)
         -- TODO regroup is a major allocator. optimize this somehow
+        {-# INLINE regroup #-}
         regroup (!elemOff:_, !attrOff:_, ts@(t:_)) =
           (elemOff, attrOff, Triangles (triTexId t)
                              (Vector.concat $ triIndices <$> ts)

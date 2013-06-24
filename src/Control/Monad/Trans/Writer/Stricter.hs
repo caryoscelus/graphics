@@ -37,6 +37,7 @@ import Test.Framework.Providers.QuickCheck2 (testProperty)
 type Writer w = WriterT w Identity
 
 runWriter :: Monoid w => Writer w a -> (a, w)
+{-# INLINE runWriter #-}
 runWriter = runIdentity . runWriterT
 
 newtype WriterT w m a = WriterT { unWriterT :: StateT w m a }
@@ -45,30 +46,40 @@ newtype WriterT w m a = WriterT { unWriterT :: StateT w m a }
                                )
 
 writerT :: (Monoid w, Monad m) => m (a, w) -> WriterT w m a
+{-# INLINE writerT #-}
 writerT maw = WriterT . StateT $ \w -> do
   (a, w') <- maw
   return (a, w <> w')
 
 runWriterT :: Monoid w => WriterT w m a -> m (a, w)
+{-# INLINE runWriterT #-}
 runWriterT = (`runStateT` mempty) . unWriterT
 
 execWriterT :: (Monad m, Monoid w) => WriterT w m a -> m w
+{-# INLINE execWriterT #-}
 execWriterT = liftM snd . runWriterT
 
 mapWriterT :: (Monad n, Monoid w, Monoid w') =>
               (m (a, w) -> n (b, w')) -> WriterT w m a -> WriterT w' n b
+{-# INLINE mapWriterT #-}
 mapWriterT f = writerT . f . runWriterT
 
 instance (Foldable f, Monoid w) => Foldable (WriterT w f) where
+  {-# INLINE foldMap #-}
   foldMap f = foldMap (f . fst) . runWriterT
   
 instance (Traversable f, Monad f, Monoid w) => Traversable (WriterT w f) where
+  {-# INLINE traverse #-}
   traverse f = fmap writerT . (traverse._1) f . runWriterT
 
 instance (Monad m, Monoid w) => MonadWriter w (WriterT w m) where
+  {-# INLINE writer #-}
   writer = writerT . return
+  {-# INLINE tell #-}
   tell = WriterT . modify . flip (<>)
+  {-# INLINE listen #-}
   listen m = writerT $ liftM (\(a, w) -> ((a, w), w)) (runWriterT m)
+  {-# INLINE pass #-}
   pass m = writerT $ liftM (\((a, f), w) -> (a, f w)) (runWriterT m)
 
 #ifdef ENABLE_TESTS
