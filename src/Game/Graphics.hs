@@ -1,7 +1,7 @@
 {-# OPTIONS -fexpose-all-unfoldings #-}
 {-# OPTIONS -funbox-strict-fields #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards            #-}
 module Game.Graphics
        ( Space ()
        , transform, translate, rotate, scale, shear, reflect
@@ -17,17 +17,17 @@ import Control.Monad
 import Control.Monad.Fix
 import Control.Monad.Trans.Writer.Stricter
 import Data.Colour
-import Data.Colour.Names (white)
+import Data.Colour.Names                    (white)
 import Data.Foldable
 import Data.Traversable
-import Game.Graphics.AffineTransform (AffineTransform)
-import Game.Graphics.Triangles (GraphicsState)
+import Game.Graphics.AffineTransform        (AffineTransform)
 import Game.Graphics.Texture
+import Game.Graphics.Triangles              (GraphicsState)
 import Graphics.Rendering.OpenGL.Raw.Core31
 import Linear.V2
 
 import qualified Game.Graphics.AffineTransform as Transform
-import qualified Game.Graphics.Triangles as Triangles
+import qualified Game.Graphics.Triangles       as Triangles
 
 newtype Space a = Space { unSpace :: WriterT AffineTransform [] a }
                 deriving ( Functor, Applicative, Alternative, Monad
@@ -39,6 +39,8 @@ runSpace :: Space a -> [(a, AffineTransform)]
 runSpace = runWriterT . unSpace
 
 -- TODO put these into a MonadSpace class?
+
+-- TODO this could be a monad transformer
 
 transform :: AffineTransform -> Space ()
 {-# INLINE transform #-}

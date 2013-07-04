@@ -32,6 +32,10 @@ import Linear.V3
 import qualified Data.Vector.Storable as Vector
 import qualified Game.Graphics.Attributes as Attributes
 
+-- TODO This whole library should be restructured such that
+-- non-fusable lazy list algorithms are not a fundamental part of the
+-- tightest loop.
+
 data Triangles =
   Triangles { triTexId      :: !GLuint
             , triIndices    :: !(Vector GLuint)

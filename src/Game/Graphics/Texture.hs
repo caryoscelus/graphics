@@ -1,7 +1,7 @@
 {-# OPTIONS -fexpose-all-unfoldings #-}
 {-# OPTIONS -funbox-strict-fields #-}
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts   #-}
 module Game.Graphics.Texture
        ( Texture (), Sampling (..), TextureError (..)
        , loadTexture, loadTexturePremultiplied
@@ -27,17 +27,27 @@ import Linear.V2
 import qualified Data.Vector.Storable as Vector
 
 data Texture =
-  Texture { texId     :: !GLuint
-          , texSize   :: !(V2 Word)
+  Texture { texId   :: !GLuint
+          , texSize :: !(V2 Word)
           }
 
 -- TODO support for tiling textures, somehow
 
--- TODO add support for custom mipmaps, or write a high quality
--- mipmapper right here
+-- TODO Add support for custom mipmaps, or write a high quality
+-- mipmapper right here. The main point is that I just don't trust all
+-- OpenGL drivers to do it right.
 
 -- TODO add support for using texture arrays automatically on machines
 -- that support them
+
+-- TODO premultiplyAlpha is really slow. It isn't critical since it's
+-- not in a tight loop, but it will become annoying when loading a lot
+-- of images. A LUT is probably the way to go.
+
+-- TODO Add support for texture arrays, under the hood, when
+-- available. This should be a pretty big speedup for certain kinds of
+-- graphics engines (e.g. any game where sprites with different
+-- textures can be dynamically reordered front to back).
 
 premultiplyAlpha :: Image PixelRGBA8 -> Image PixelRGBA8
 premultiplyAlpha = pixelMap $ fromColour . toColour

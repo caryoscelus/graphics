@@ -1,23 +1,19 @@
 {-# OPTIONS -fexpose-all-unfoldings #-}
 {-# OPTIONS -funbox-strict-fields   #-}
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns  #-}
 {-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE ViewPatterns #-}
 module Game.Graphics.AffineTransform
        ( AffineTransform ()
        , translate, rotate, scale, shear, reflect, invert
        , apply, applyFourCorners01
        ) where
 
-import Graphics.Rendering.OpenGL.Raw.Core31
 import Data.Monoid
+import Graphics.Rendering.OpenGL.Raw.Core31
 import Linear.V2
 
 -- TODO applyFourCorners01 may be fairly implementation-revealing and
 -- should probably be hidden somehow (an Internal module?)
-
--- TODO It's not really right for this to be a Functor. There should
--- just be some primitives for converting.
 
 data AffineTransform = A2D !GLfloat !GLfloat !GLfloat
                            !GLfloat !GLfloat !GLfloat
@@ -28,10 +24,7 @@ instance Monoid AffineTransform where
   {-# INLINE mempty #-}
   mempty = A2D 1 0 0
                0 1 0
-  -- TODO mappend is currently the largest source of allocations, most
-  -- of which presumably could be avoided with unboxed fields. I think
-  -- this has been bad enough that I'm willing to sacrifice some
-  -- polymorphism for it
+
   {-# INLINE mappend #-}
   A2D a11 a12 a13
       a21 a22 a23 `mappend` A2D b11 b12 b13
