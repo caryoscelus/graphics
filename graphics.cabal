@@ -44,13 +44,16 @@ library
                      Game.Graphics.Utils
   ghc-options:       -O2 -Wall
   other-extensions:  BangPatterns,
+                     CPP,
                      DeriveDataTypeable,
                      DeriveFunctor,
                      FlexibleContexts,
+                     FlexibleInstances,
                      GeneralizedNewtypeDeriving,
                      OverloadedStrings,
                      RankNTypes,
                      RecordWildCards,
+                     ScopedTypeVariables,
                      ViewPatterns
 
 executable example1
@@ -87,3 +90,15 @@ test-suite tests
   hs-source-dirs:    src, test
   cpp-options:       -DENABLE_TESTS
   ghc-options:       -Wall
+  other-extensions:  BangPatterns,
+                     CPP,
+                     DeriveDataTypeable,
+                     DeriveFunctor,
+                     FlexibleContexts,
+                     FlexibleInstances,
+                     GeneralizedNewtypeDeriving,
+                     OverloadedStrings,
+                     RankNTypes,
+                     RecordWildCards,
+                     ScopedTypeVariables,
+                     ViewPatterns
