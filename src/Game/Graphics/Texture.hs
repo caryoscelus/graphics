@@ -14,8 +14,6 @@ import Codec.Picture.Types
 import Control.Applicative
 import Control.Exception
 import Control.Monad
-import Data.Colour
-import Data.Colour.SRGB
 import Data.Typeable
 import Data.Word
 import Foreign.Ptr
@@ -25,6 +23,7 @@ import Graphics.Rendering.OpenGL.Raw.Core32
 import Linear.V2
 
 import qualified Data.Vector.Storable as Vector
+import qualified Data.Vector.Unboxed  as Unboxed
 
 data Texture =
   Texture { texId   :: !GLuint
@@ -40,24 +39,33 @@ data Texture =
 -- TODO add support for using texture arrays automatically on machines
 -- that support them
 
--- TODO premultiplyAlpha is really slow. It isn't critical since it's
--- not in a tight loop, but it will become annoying when loading a lot
--- of images. A LUT is probably the way to go.
-
 -- TODO Add support for texture arrays, under the hood, when
 -- available. This should be a pretty big speedup for certain kinds of
 -- graphics engines (e.g. any game where sprites with different
 -- textures can be dynamically reordered front to back).
 
 premultiplyAlpha :: Image PixelRGBA8 -> Image PixelRGBA8
-premultiplyAlpha = pixelMap $ fromColour . toColour
-  where toColour (PixelRGBA8 r g b a) =
-          sRGB24 r g b `withOpacity`
-          (fromIntegral a / fromIntegral (maxBound :: Word8)) :: AlphaColour Double
-        fromColour alphaColor =
-          let a = round $ alphaChannel alphaColor * fromIntegral (maxBound :: Word8)
-              RGB r g b = toSRGB24 $ alphaColor `over` black
-          in PixelRGBA8 r g b a
+premultiplyAlpha = pixelMap (\(PixelRGBA8 r g b a) -> PixelRGBA8 (f a r) (f a g) (f a b) a)
+  where premultiplyChannel :: Word8 -> Word8 -> Word8
+        premultiplyChannel a =
+          round . (* m) . toSRGB . (* (fromIntegral a / m)) . fromSRGB . (/ m) .
+          fromIntegral
+        toSRGB, fromSRGB :: Double -> Double
+        toSRGB lin | lin == 1         = 1
+                   | lin <= 0.0031308 = 12.92*lin
+                   | otherwise        = (1 + transA)*lin**(1/2.4) - transA
+        fromSRGB nonLin | nonLin == 1       = 1
+                        | nonLin <= 0.04045 = nonLin/12.92
+                        | otherwise         = ((nonLin + transA)/(1 + transA))**2.4
+        transA = 0.055
+        lut :: Unboxed.Vector Word8
+        {-# NOINLINE lut #-}
+        lut = Unboxed.concatMap
+              (\a -> Unboxed.generate (m+1) $
+               premultiplyChannel a . fromIntegral) $ Unboxed.enumFromN 0 (m+1)
+        m :: Num a => a
+        m = fromIntegral (maxBound :: Word8)
+        f a c = lut Unboxed.! (fromIntegral a * m + fromIntegral c)
 
 data Sampling = Nearest | Linear deriving (Eq, Ord, Read, Show)
 
