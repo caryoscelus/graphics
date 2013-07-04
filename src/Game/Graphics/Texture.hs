@@ -36,9 +36,6 @@ data Texture =
 -- mipmapper right here. The main point is that I just don't trust all
 -- OpenGL drivers to do it right.
 
--- TODO add support for using texture arrays automatically on machines
--- that support them
-
 -- TODO Add support for texture arrays, under the hood, when
 -- available. This should be a pretty big speedup for certain kinds of
 -- graphics engines (e.g. any game where sprites with different
