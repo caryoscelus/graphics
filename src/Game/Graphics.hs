@@ -38,10 +38,6 @@ runSpace :: Space a -> [(a, AffineTransform)]
 {-# INLINE runSpace #-}
 runSpace = runWriterT . unSpace
 
--- TODO put these into a MonadSpace class?
-
--- TODO this could be a monad transformer
-
 transform :: AffineTransform -> Space ()
 {-# INLINE transform #-}
 transform = Space . tell

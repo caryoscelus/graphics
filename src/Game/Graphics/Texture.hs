@@ -30,16 +30,9 @@ data Texture =
           , texSize :: !(V2 Word)
           }
 
--- TODO support for tiling textures, somehow
-
 -- TODO Add support for custom mipmaps, or write a high quality
 -- mipmapper right here. The main point is that I just don't trust all
 -- OpenGL drivers to do it right.
-
--- TODO Add support for texture arrays, under the hood, when
--- available. This should be a pretty big speedup for certain kinds of
--- graphics engines (e.g. any game where sprites with different
--- textures can be dynamically reordered front to back).
 
 premultiplyAlpha :: Image PixelRGBA8 -> Image PixelRGBA8
 premultiplyAlpha = pixelMap (\(PixelRGBA8 r g b a) -> PixelRGBA8 (f a r) (f a g) (f a b) a)

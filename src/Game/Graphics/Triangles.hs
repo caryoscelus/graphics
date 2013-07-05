@@ -32,18 +32,12 @@ import Linear.V3
 import qualified Data.Vector.Storable as Vector
 import qualified Game.Graphics.Attributes as Attributes
 
--- TODO This whole library should be restructured such that
--- non-fusable lazy list algorithms are not a fundamental part of the
--- tightest loop.
-
 data Triangles =
   Triangles { triTexId      :: !GLuint
             , triIndices    :: !(Vector GLuint)
             , triAttributes :: !(Vector Attributes)
             } deriving Show
 
--- TODO This function is entered a lot, consuming a lot of CPU
--- time. Optimize or use less somehow.
 applyTransform :: AffineTransform -> Triangles -> Triangles
 {-# INLINE applyTransform #-}
 applyTransform trans tris =
@@ -149,7 +143,6 @@ chunksToDraw (x:xs) =
               !attrOff | attrOff' + attributeBytes t > bufferBytes = 0
                        | otherwise = attrOff'
           in (elemOff, attrOff, offsetElems attrOff t)
-        -- TODO regroup is a major allocator. optimize this somehow
         {-# INLINE regroup #-}
         regroup (!elemOff:_, !attrOff:_, ts@(t:_)) =
           (elemOff, attrOff, Triangles (triTexId t)
