@@ -2,6 +2,7 @@ import           Control.Applicative
 import           Control.Monad
 import           Data.Colour
 import           Data.Colour.Names
+import           Data.Time
 import           Game.Graphics
 import           Graphics.UI.GLFW    (DisplayOptions (..))
 import qualified Graphics.UI.GLFW    as GLFW
@@ -41,8 +42,14 @@ main = do
         msum $ map (\x -> scale (let y = (x+1)/75 in V2 y y) *> translate (V2 (x*5 - 250) 0) *>
                           ((translate (V2 0 (sin (pi*x/50 + n/250) * 250)) *> spr1) <|>
                            (translate (V2 0 (cos (pi*x/50 + n/250) * 250)) *> spr2))) [0..99]
-  forM_ [0..9999] $ \x -> do
+  let frames :: Num a => a
+      frames = 10000
+  start <- getCurrentTime
+  forM_ [1..frames] $ \x -> do
     clear
     _ <- draw graphicsState $ image x
     GLFW.swapBuffers
+  stop <- getCurrentTime
+  let spf = realToFrac $ stop `diffUTCTime` start / frames :: Double
+  putStrLn $ show (round $ spf * 1000000 :: Int) ++ " us/frame, " ++ show (round $ recip spf :: Int) ++ " frames/s, " ++ show (round $ recip spf * 200 :: Int) ++ " sprites/s"
   GLFW.terminate
