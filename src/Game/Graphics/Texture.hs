@@ -55,7 +55,7 @@ premultiplyAlpha = pixelMap (\(PixelRGBA8 r g b a) -> PixelRGBA8 (f a r) (f a g)
                premultiplyChannel a . fromIntegral) $ Unboxed.enumFromN 0 (m+1)
         m :: Num a => a
         m = fromIntegral (maxBound :: Word8)
-        f a c = Unboxed.unsafeIndex lut $ fromIntegral a * m + fromIntegral c
+        f a c = Unboxed.unsafeIndex lut $ fromIntegral a * (m+1) + fromIntegral c
 
 data Sampling = Nearest | Linear deriving (Eq, Ord, Read, Show)
 

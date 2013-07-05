@@ -1,11 +1,11 @@
-import Control.Applicative
-import Control.Monad
-import Data.Colour
-import Data.Colour.Names
-import Game.Graphics
-import Graphics.UI.GLFW (DisplayOptions (..))
-import Linear.V2
-import qualified Graphics.UI.GLFW as GLFW
+import           Control.Applicative
+import           Control.Monad
+import           Data.Colour
+import           Data.Colour.Names
+import           Game.Graphics
+import           Graphics.UI.GLFW    (DisplayOptions (..))
+import qualified Graphics.UI.GLFW    as GLFW
+import           Linear.V2
 
 windowWidth, windowHeight :: Num a => a
 windowWidth  = 1024
