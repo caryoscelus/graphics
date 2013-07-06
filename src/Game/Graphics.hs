@@ -5,8 +5,8 @@
 module Game.Graphics
        ( Space ()
        , transform, translate, rotate, scale, shear, reflect
-       , Sampling (..), Texture ()
-       , texture, texturePremultiplied, loadTexture, loadTexturePremultiplied
+       , Sampling (..), Alpha (..), Texture ()
+       , texture, loadTexture
        , Sprite (), sprite, modulatedSprite
        , GraphicsState (), Triangles.initializeGraphics, draw, clear
        , GLfloat, glViewport

@@ -31,10 +31,10 @@ main = do
   windowOpened <- GLFW.openWindow displayOptions
   unless windowOpened $ error "failed to open window"
   GLFW.setWindowTitle "Wizard!"
-  GLFW.setWindowBufferSwapInterval 0
+  -- GLFW.setWindowBufferSwapInterval 0
   glViewport 0 0 windowWidth windowHeight
   graphicsState <- initializeGraphics
-  tex <- either error id <$> loadTexture Linear "examples/example1/wizard/wizard.png"
+  tex <- either error id <$> loadTexture Standard Linear "examples/example1/wizard/wizard.png"
   let spr1 = sprite (V2 3 7) (V2 55 82) tex
       spr2 = modulatedSprite ((yellowgreen :: Colour Double) `withOpacity` 0.5) (V2 2 100) (V2 52 80) tex
       image n = do
