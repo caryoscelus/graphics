@@ -1,8 +1,9 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE CPP                        #-}
+{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE TupleSections              #-}
+{-# LANGUAGE ViewPatterns               #-}
 {-# OPTIONS -fexpose-all-unfoldings #-}
 module Control.Monad.Trans.Writer.Stricter
        ( WriterT (), writerT, runWriterT
@@ -15,7 +16,6 @@ module Control.Monad.Trans.Writer.Stricter
        ) where
 
 import Control.Applicative
-import Control.Lens
 import Control.Monad
 import Control.Monad.Fix
 import Control.Monad.Trans
@@ -24,14 +24,15 @@ import Control.Monad.Writer.Class
 import Data.Foldable
 import Data.Functor.Identity
 import Data.Monoid
+import Data.Traversable
 
 #ifdef ENABLE_TESTS
-import Control.Arrow
-import qualified Control.Monad.Trans.Writer.Strict as Strict
-import Test.QuickCheck
-import Test.QuickCheck.Function
-import Test.Framework (Test, testGroup)
-import Test.Framework.Providers.QuickCheck2 (testProperty)
+import           Control.Arrow
+import qualified Control.Monad.Trans.Writer.Strict    as Strict
+import           Test.Framework                       (Test, testGroup)
+import           Test.Framework.Providers.QuickCheck2 (testProperty)
+import           Test.QuickCheck
+import           Test.QuickCheck.Function
 #endif
 
 type Writer w = WriterT w Identity
@@ -67,7 +68,10 @@ mapWriterT f = writerT . f . runWriterT
 instance (Foldable f, Monoid w) => Foldable (WriterT w f) where
   {-# INLINE foldMap #-}
   foldMap f = foldMap (f . fst) . runWriterT
-  
+
+_1 :: Functor f => (a -> f b) -> (a, c) -> f (b, c)
+_1 f (x, y) = (, y) <$> f x
+
 instance (Traversable f, Monad f, Monoid w) => Traversable (WriterT w f) where
   {-# INLINE traverse #-}
   traverse f = fmap writerT . (traverse._1) f . runWriterT

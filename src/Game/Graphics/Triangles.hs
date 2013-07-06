@@ -1,27 +1,27 @@
 {-# OPTIONS -fexpose-all-unfoldings #-}
 {-# OPTIONS -funbox-strict-fields #-}
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE BangPatterns        #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE ViewPatterns        #-}
 module Game.Graphics.Triangles (GraphicsState (), Triangles (), draw, applyTransform, sprite, initializeGraphics) where
 
 import Control.Applicative
-import Control.Lens (traverse, toListOf, maximumOf, minimumOf)
 import Control.Monad
 import Data.Bits
-import Data.ByteString (ByteString, useAsCString)
-import Data.Colour as Colour
+import Data.ByteString                      (ByteString, useAsCString)
+import Data.Colour                          as Colour
 import Data.Colour.SRGB
 import Data.Colour.SRGB.Linear
-import Data.Maybe
+import Data.Foldable                        (toList)
 import Data.List
-import Data.Vector.Storable (Vector)
+import Data.Maybe
+import Data.Vector.Storable                 (Vector)
 import Foreign.Ptr
 import Foreign.Storable
-import Game.Graphics.AffineTransform (AffineTransform)
-import Game.Graphics.Attributes hiding (applyTransform)
+import Game.Graphics.AffineTransform        (AffineTransform)
+import Game.Graphics.Attributes             hiding (applyTransform)
 import Game.Graphics.Shader
 import Game.Graphics.Texture
 import Game.Graphics.Utils
@@ -29,7 +29,7 @@ import Graphics.Rendering.OpenGL.Raw.Core32
 import Linear.V2
 import Linear.V3
 
-import qualified Data.Vector.Storable as Vector
+import qualified Data.Vector.Storable     as Vector
 import qualified Game.Graphics.Attributes as Attributes
 
 data Triangles =
@@ -67,11 +67,12 @@ triangles :: Real a => Texture -> AlphaColour a -> [V3 (V2 Int)] -> Triangles
 triangles tex _ [] = Triangles (texId tex) Vector.empty Vector.empty
 triangles tex (alphaColourConvert -> color) tris =
   Triangles (texId tex) (Vector.map fromIntegral $ Vector.fromList ixs) attrs
-  where (!verts, !ixs) = inferIndices $ toListOf (traverse.traverse) tris
-        !minX = fromJust $ minimumOf (traverse._x) verts
-        !maxX = fromJust $ maximumOf (traverse._x) verts
-        !minY = fromJust $ minimumOf (traverse._y) verts
-        !maxY = fromJust $ maximumOf (traverse._y) verts
+  where (!verts, !ixs) = inferIndices $ concatMap toList tris
+        view l = getConst . l Const
+        !minX = minimum $ (map.view) _x verts
+        !maxX = maximum $ (map.view) _x verts
+        !minY = minimum $ (map.view) _y verts
+        !maxY = maximum $ (map.view) _y verts
         !offsetX = minX + (maxX-minX) `div` 2
         !offsetY = minY + (maxY-minY) `div` 2
         !alpha = alphaChannel color
@@ -183,7 +184,7 @@ draw GraphicsState{..} tris =
                             (&&success) <$> drawTriangles elemOff attrOff ts)
                     True $ chunksToDraw tris
 
-    unless srgbWasEnabled $ glDisable gl_FRAMEBUFFER_SRGB  
+    unless srgbWasEnabled $ glDisable gl_FRAMEBUFFER_SRGB
     return drewCleanly
 
 vShader :: ByteString
@@ -229,7 +230,7 @@ initializeGraphics =
     ibo <- glGen glGenBuffers
 
     glBindVertexArray vao
-    
+
     glBindBuffer gl_ARRAY_BUFFER vbo
     glBufferData gl_ARRAY_BUFFER bufferBytes nullPtr gl_STREAM_DRAW
 
