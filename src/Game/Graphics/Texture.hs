@@ -1,7 +1,8 @@
 {-# OPTIONS -fexpose-all-unfoldings #-}
 {-# OPTIONS -funbox-strict-fields #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Game.Graphics.Texture
        ( Texture (), Sampling (..), TextureError (..)
        , loadTexture, loadTexturePremultiplied
@@ -34,13 +35,9 @@ data Texture =
 -- mipmapper right here. The main point is that I just don't trust all
 -- OpenGL drivers to do it right.
 
-premultiplyAlpha :: Image PixelRGBA8 -> Image PixelRGBA8
-premultiplyAlpha = pixelMap (\(PixelRGBA8 r g b a) -> PixelRGBA8 (f a r) (f a g) (f a b) a)
-  where premultiplyChannel :: Word8 -> Word8 -> Word8
-        premultiplyChannel a =
-          round . (* m) . toSRGB . (* (fromIntegral a / m)) . fromSRGB . (/ m) .
-          fromIntegral
-        toSRGB, fromSRGB :: Double -> Double
+premultiplyChannel :: forall a. (Bounded a, Integral a) => a -> a -> a
+premultiplyChannel a = round . (* m) . toSRGB . (* (fromIntegral a / m)) . fromSRGB . (/ m) . fromIntegral
+  where toSRGB, fromSRGB :: Double -> Double
         toSRGB lin | lin == 1         = 1
                    | lin <= 0.0031308 = 12.92*lin
                    | otherwise        = (1 + transA)*lin**(1/2.4) - transA
@@ -48,14 +45,21 @@ premultiplyAlpha = pixelMap (\(PixelRGBA8 r g b a) -> PixelRGBA8 (f a r) (f a g)
                         | nonLin <= 0.04045 = nonLin/12.92
                         | otherwise         = ((nonLin + transA)/(1 + transA))**2.4
         transA = 0.055
-        lut :: Unboxed.Vector Word8
+        m :: Num b => b
+        m = fromIntegral (maxBound :: a)
+
+premultiplyAlpha :: Image PixelRGBA8 -> Image PixelRGBA8
+premultiplyAlpha =
+  pixelMap (\(PixelRGBA8 r g b a) ->
+             let h = f a
+             in PixelRGBA8 (h r) (h g) (h b) a)
+  where lut :: Unboxed.Vector Word8
         {-# NOINLINE lut #-}
         lut = Unboxed.concatMap
-              (\a -> Unboxed.generate (m+1) $
-               premultiplyChannel a . fromIntegral) $ Unboxed.enumFromN 0 (m+1)
-        m :: Num a => a
-        m = fromIntegral (maxBound :: Word8)
-        f a c = Unboxed.unsafeIndex lut $ fromIntegral a * (m+1) + fromIntegral c
+              (\a -> Unboxed.generate n $
+               premultiplyChannel a . fromIntegral) $ Unboxed.enumFromN 0 n
+        n = fromIntegral (maxBound :: Word8) + 1
+        f a c = Unboxed.unsafeIndex lut $ fromIntegral a * n + fromIntegral c
 
 data Sampling = Nearest | Linear deriving (Eq, Ord, Read, Show)
 
