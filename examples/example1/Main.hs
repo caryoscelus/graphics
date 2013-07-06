@@ -31,7 +31,7 @@ main = do
   windowOpened <- GLFW.openWindow displayOptions
   unless windowOpened $ error "failed to open window"
   GLFW.setWindowTitle "Wizard!"
-  -- GLFW.setWindowBufferSwapInterval 0
+  GLFW.setWindowBufferSwapInterval 0
   glViewport 0 0 windowWidth windowHeight
   graphicsState <- initializeGraphics
   tex <- either error id <$> loadTexture Standard Linear "examples/example1/wizard/wizard.png"
