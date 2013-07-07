@@ -72,7 +72,7 @@ clear :: IO ()
 {-# INLINE clear #-}
 clear = glClear gl_COLOR_BUFFER_BIT
 
-modulatedSprite :: Real a => AlphaColour a -> V2 Int -> V2 Int -> Texture -> Space Sprite
+modulatedSprite :: AlphaColour GLfloat -> V2 Int -> V2 Int -> Texture -> Space Sprite
 {-# INLINE modulatedSprite #-}
 modulatedSprite color pos dim tex = return $! Triangles.sprite tex color pos dim
 

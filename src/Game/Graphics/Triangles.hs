@@ -63,9 +63,9 @@ inferIndices xs =
 -- of just guessing from the height and width of the shape.
 
 -- @triangles texture color trianglesInTexturePixelCoords@
-triangles :: Real a => Texture -> AlphaColour a -> [V3 (V2 Int)] -> Triangles
+triangles :: Texture -> AlphaColour GLfloat -> [V3 (V2 Int)] -> Triangles
 triangles tex _ [] = Triangles (texId tex) Vector.empty Vector.empty
-triangles tex (alphaColourConvert -> color) tris =
+triangles tex color tris =
   Triangles (texId tex) (Vector.map fromIntegral $ Vector.fromList ixs) attrs
   where (!verts, !ixs) = inferIndices $ concatMap toList tris
         view l = getConst . l Const
@@ -86,7 +86,7 @@ triangles tex (alphaColourConvert -> color) tris =
         V2 !texW !texH = fromIntegral <$> texSize tex
 
 -- | @sprite texture color upperLeft dimensions@
-sprite :: Real a => Texture -> AlphaColour a -> V2 Int -> V2 Int -> Triangles
+sprite :: Texture -> AlphaColour GLfloat -> V2 Int -> V2 Int -> Triangles
 sprite tex color (V2 x y) (V2 w h) =
   triangles tex color [ V3 (V2 l t) (V2 l b) (V2 r t)
                       , V3 (V2 r t) (V2 l b) (V2 r b)
