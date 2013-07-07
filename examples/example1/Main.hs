@@ -2,36 +2,26 @@ import           Control.Applicative
 import           Control.Monad
 import           Data.Colour
 import           Data.Colour.Names
+import           Data.Maybe
 import           Data.Time
 import           Game.Graphics
-import           Graphics.UI.GLFW    (DisplayOptions (..))
 import qualified Graphics.UI.GLFW    as GLFW
 import           Linear.V2
+import           Text.Printf         (printf)
 
 windowWidth, windowHeight :: Num a => a
 windowWidth  = 1024
 windowHeight = 768
 
-displayOptions :: DisplayOptions
-displayOptions =
-  GLFW.defaultDisplayOptions { displayOptions_width                   = windowWidth
-                             , displayOptions_height                  = windowHeight
-                             , displayOptions_numRedBits              = 8
-                             , displayOptions_numGreenBits            = 8
-                             , displayOptions_numBlueBits             = 8
-                             , displayOptions_windowIsResizable       = False
-                             , displayOptions_openGLVersion           = (2,1)
-                             , displayOptions_openGLDebugContext      = True
-                             }
-
 main :: IO ()
 main = do
-  glfwInitialized <- GLFW.initialize
+  glfwInitialized <- GLFW.init
   unless glfwInitialized $ error "failed to initialize GLFW"
-  windowOpened <- GLFW.openWindow displayOptions
-  unless windowOpened $ error "failed to open window"
-  GLFW.setWindowTitle "Wizard!"
-  GLFW.setWindowBufferSwapInterval 0
+  GLFW.windowHint $ GLFW.WindowHint'Resizable False
+  maybeWindow <- GLFW.createWindow windowWidth windowHeight "Wizard!" Nothing Nothing
+  let window = fromMaybe (error "failed to open window") maybeWindow
+  GLFW.makeContextCurrent maybeWindow
+  GLFW.swapInterval 0
   glViewport 0 0 windowWidth windowHeight
   graphicsState <- initializeGraphics
   tex <- either error id <$> loadTexture Standard Linear "examples/example1/wizard/wizard.png"
@@ -48,8 +38,30 @@ main = do
   forM_ [1..frames] $ \x -> do
     clear
     _ <- draw graphicsState $ image x
-    GLFW.swapBuffers
+    GLFW.swapBuffers window
   stop <- getCurrentTime
-  let spf = realToFrac $ stop `diffUTCTime` start / frames :: Double
-  putStrLn $ show (round $ spf * 1000000 :: Int) ++ " us/frame, " ++ show (round $ recip spf :: Int) ++ " frames/s, " ++ show (round $ recip spf * 200 :: Int) ++ " sprites/s"
+  let spf = realToFrac $ stop `diffUTCTime` start / frames
+  putStrLn $ secs spf ++ "/frame"
   GLFW.terminate
+
+secs :: Double -> String
+secs k
+  | k < 0      = '-' : secs (-k)
+  | k >= 1e9   = (k/1e9)  `with` "Gs"
+  | k >= 1e6   = (k/1e6)  `with` "Ms"
+  | k >= 1e4   = (k/1e3)  `with` "Ks"
+  | k >= 1     = k        `with` "s"
+  | k >= 1e-3  = (k*1e3)  `with` "ms"
+  | k >= 1e-6  = (k*1e6)  `with` "us"
+  | k >= 1e-9  = (k*1e9)  `with` "ns"
+  | k >= 1e-12 = (k*1e12) `with` "ps"
+  | otherwise  = printf "%g s" k
+  where t `with` u
+          | t >= 1e9  = printf "%.4g %s" t u
+          | t >= 1e6  = printf "%.0f %s" t u
+          | t >= 1e5  = printf "%.0f %s" t u
+          | t >= 1e4  = printf "%.0f %s" t u
+          | t >= 1e3  = printf "%.0f %s" t u
+          | t >= 1e2  = printf "%.0f %s" t u
+          | t >= 1e1  = printf "%.1f %s" t u
+          | otherwise = printf "%.2f %s" t u
