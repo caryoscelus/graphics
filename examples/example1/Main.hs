@@ -21,7 +21,6 @@ displayOptions =
                              , displayOptions_numBlueBits             = 8
                              , displayOptions_windowIsResizable       = False
                              , displayOptions_openGLVersion           = (2,1)
-                             , displayOptions_openGLDebugContext      = True
                              }
 
 main :: IO ()
