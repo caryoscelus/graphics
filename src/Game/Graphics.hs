@@ -64,6 +64,17 @@ reflect = transform . Transform.reflect
 
 type Sprite = Triangles.Triangles
 
+-- | This function will make the following changes to OpenGL state by
+-- the time it returns:
+--
+--   * the current vertex array binding will be unset
+--   * the current program will be unset
+--   * the active texture unit will be set to GL_TEXTURE0
+--   * GL_TEXTURE_2D will be unbound
+--   * GL_ARRAY_BUFFER and GL_ELEMENT_ARRAY_BUFFER will be unbound
+--   * the blend function will be set to GL_ONE, GL_ONE_MINUS_SRC_ALPHA
+--   * blending will be enabled
+--   * GL_FRAMEBUFFER_SRGB will be enabled on the current framebuffer
 draw :: GraphicsState -> Space Sprite -> IO Bool
 {-# INLINE draw #-}
 draw gs = Triangles.draw gs . map (uncurry $ flip Triangles.applyTransform) . runSpace

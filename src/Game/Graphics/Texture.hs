@@ -80,6 +80,11 @@ data Alpha = Standard | Premultiplied deriving (Eq, Ord, Read, Show)
 -- internal format is chosen based on the input format. The color
 -- spaces for 8 and 16 bit RGB channels are assumed to be sRGB; all
 -- others are assumed to be in linear color space.
+--
+-- This function will make the following changes to OpenGL state by
+-- the time it returns:
+--
+--   * GL_TEXTURE_2D will be unbound
 texture :: Alpha -> Sampling -> DynamicImage -> IO Texture
 texture alpha sampling dynImg =
   case dynImg of
@@ -113,6 +118,10 @@ texture alpha sampling dynImg =
   where whenShouldPremultiply f | alpha == Standard = f
                                 | otherwise         = id
 
+-- | This function will make the following changes to OpenGL state by
+-- the time it returns:
+--
+--   * GL_TEXTURE_2D will be unbound
 texImage2D :: Storable (PixelBaseComponent b) => Sampling -> GLenum -> GLenum -> GLenum -> Image b -> IO Texture
 texImage2D sampling internal format type_ img = do
   let w, h :: Num a => a
@@ -120,14 +129,13 @@ texImage2D sampling internal format type_ img = do
       h = fromIntegral $ imageHeight img :: Num a => a
   maxDim <- glGet gl_MAX_TEXTURE_SIZE
   when (maxDim < w || maxDim < h) . throwIO $ DimensionsTooLarge maxDim w h
-  origTid <- glGet gl_TEXTURE_BINDING_2D
   tid <- glGen glGenTextures
   glBindTexture gl_TEXTURE_2D tid
   unsafeWith img $ glTexImage2D gl_TEXTURE_2D 0 (fromIntegral internal) w h 0 format type_
   setSampling sampling
   glTexParameteri gl_TEXTURE_2D gl_TEXTURE_WRAP_S $ fromIntegral gl_CLAMP_TO_EDGE
   glTexParameteri gl_TEXTURE_2D gl_TEXTURE_WRAP_T $ fromIntegral gl_CLAMP_TO_EDGE
-  glBindTexture gl_TEXTURE_2D origTid
+  glBindTexture gl_TEXTURE_2D 0
   return $! Texture tid $ V2 w h
   where unsafeWith :: Storable (PixelBaseComponent a) => Image a -> (Ptr (PixelBaseComponent a) -> IO b) -> IO b
         unsafeWith = Vector.unsafeWith . imageData
@@ -137,5 +145,9 @@ loadTexture' f alpha sampling = traverseEither (f alpha sampling) <=< readImage
   where traverseEither _ (Left l) = return (Left l)
         traverseEither g (Right r) = Right <$> g r
 
+-- | This function will make the following changes to OpenGL state by
+-- the time it returns:
+--
+--   * GL_TEXTURE_2D will be unbound
 loadTexture :: Alpha -> Sampling -> FilePath -> IO (Either String Texture)
 loadTexture = loadTexture' texture

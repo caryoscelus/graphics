@@ -150,7 +150,7 @@ chunksToDraw (x:xs) =
                              (Vector.concat $ triIndices <$> ts)
                              (Vector.concat $ triAttributes <$> ts))
         regroup _ = error "BUG in chunksToDraw"
-        offsetElems (fromIntegral -> !off) tri = tri { triIndices = Vector.map (+off) $ triIndices tri }
+        offsetElems (fromIntegral -> off) tri = tri { triIndices = Vector.map (+off) $ triIndices tri }
 
 data GraphicsState =
   GraphicsState { vbo     :: !GLuint
@@ -159,33 +159,38 @@ data GraphicsState =
                 , program :: !GLuint
                 }
 
+-- | This function will make the following changes to OpenGL state by
+-- the time it returns:
+--
+--   * the current vertex array binding will be unset
+--   * the current program will be unset
+--   * the active texture unit will be set to GL_TEXTURE0
+--   * GL_TEXTURE_2D will be unbound
+--   * GL_ARRAY_BUFFER and GL_ELEMENT_ARRAY_BUFFER will be unbound
+--   * the blend function will be set to GL_ONE, GL_ONE_MINUS_SRC_ALPHA
+--   * blending will be enabled
+--   * GL_FRAMEBUFFER_SRGB will be enabled on the current framebuffer
 draw :: GraphicsState -> [Triangles] -> IO Bool
-draw GraphicsState{..} tris =
-  saveAndRestore gl_VERTEX_ARRAY_BINDING glBindVertexArray .
-  saveAndRestore gl_CURRENT_PROGRAM glUseProgram .
-  saveAndRestore gl_ACTIVE_TEXTURE glActiveTexture .
-  saveAndRestore gl_TEXTURE_2D (glBindTexture gl_TEXTURE_2D) .
-  saveAndRestoreUnless (==0) gl_ELEMENT_ARRAY_BUFFER_BINDING (glBindBuffer gl_ELEMENT_ARRAY_BUFFER_BINDING) .
-  saveAndRestoreUnless (==0) gl_ARRAY_BUFFER_BINDING (glBindBuffer gl_ARRAY_BUFFER) .
-  saveAndRestore4 gl_BLEND_SRC_RGB gl_BLEND_DST_RGB gl_BLEND_SRC_ALPHA gl_BLEND_DST_ALPHA glBlendFuncSeparate $ do
-    glBindVertexArray vao
-    glUseProgram program -- assume that the uniform for the sampler is already set
-    glActiveTexture gl_TEXTURE0
-    glBindBuffer gl_ARRAY_BUFFER vbo
-    glBindBuffer gl_ELEMENT_ARRAY_BUFFER ibo
-    srgbWasEnabled <- (== fromIntegral gl_TRUE) <$>
-                      glIsEnabled gl_FRAMEBUFFER_SRGB
-    unless srgbWasEnabled $ glEnable gl_FRAMEBUFFER_SRGB
+draw GraphicsState{..} tris = do
+  glBindVertexArray vao
+  glUseProgram program -- assume that the uniform for the sampler is already set
+  glActiveTexture gl_TEXTURE0
+  glBindBuffer gl_ARRAY_BUFFER vbo
+  glBindBuffer gl_ELEMENT_ARRAY_BUFFER ibo
+  glEnable gl_FRAMEBUFFER_SRGB
+  glBlendFunc gl_ONE gl_ONE_MINUS_SRC_ALPHA
+  glEnable gl_BLEND
 
-    glBlendFunc gl_ONE gl_ONE_MINUS_SRC_ALPHA
-    glEnable gl_BLEND
+  !drewCleanly <- foldM (\ !success (elemOff, attrOff, ts) ->
+                          (&&success) <$> drawTriangles elemOff attrOff ts)
+                  True $ chunksToDraw tris
 
-    !drewCleanly <- foldM (\ !success (elemOff, attrOff, ts) ->
-                            (&&success) <$> drawTriangles elemOff attrOff ts)
-                    True $ chunksToDraw tris
+  glUseProgram 0
+  glBindBuffer gl_ARRAY_BUFFER 0
+  glBindBuffer gl_ELEMENT_ARRAY_BUFFER 0
+  glBindVertexArray 0
 
-    unless srgbWasEnabled $ glDisable gl_FRAMEBUFFER_SRGB
-    return drewCleanly
+  return drewCleanly
 
 vShader :: ByteString
 vShader =
@@ -219,50 +224,57 @@ fShader =
   \  gl_FragColor = texture2D(tex, texcoord) * color;\
   \}"
 
+-- | This function will make the following changes to OpenGL state by
+-- the time it returns:
+--
+--   * the current vertex array binding will be unset
+--   * the current program will be unset
+--   * GL_ARRAY_BUFFER and GL_ELEMENT_ARRAY_BUFFER will be unbound
 initializeGraphics :: IO GraphicsState
-initializeGraphics =
-  saveAndRestore gl_VERTEX_ARRAY_BINDING glBindVertexArray .
-  saveAndRestoreUnless (==0) gl_ARRAY_BUFFER_BINDING (glBindBuffer gl_ARRAY_BUFFER_BINDING) .
-  saveAndRestoreUnless (==0) gl_ELEMENT_ARRAY_BUFFER_BINDING (glBindBuffer gl_ELEMENT_ARRAY_BUFFER_BINDING) .
-  saveAndRestore gl_CURRENT_PROGRAM glUseProgram $ do
-    vao <- glGen glGenVertexArrays
-    vbo <- glGen glGenBuffers
-    ibo <- glGen glGenBuffers
+initializeGraphics = do
+  vao <- glGen glGenVertexArrays
+  vbo <- glGen glGenBuffers
+  ibo <- glGen glGenBuffers
 
-    glBindVertexArray vao
+  glBindVertexArray vao
 
-    glBindBuffer gl_ARRAY_BUFFER vbo
-    glBufferData gl_ARRAY_BUFFER bufferBytes nullPtr gl_STREAM_DRAW
+  glBindBuffer gl_ARRAY_BUFFER vbo
+  glBufferData gl_ARRAY_BUFFER bufferBytes nullPtr gl_STREAM_DRAW
 
-    glBindBuffer gl_ELEMENT_ARRAY_BUFFER ibo
-    glBufferData gl_ELEMENT_ARRAY_BUFFER bufferBytes nullPtr gl_STREAM_DRAW
+  glBindBuffer gl_ELEMENT_ARRAY_BUFFER ibo
+  glBufferData gl_ELEMENT_ARRAY_BUFFER bufferBytes nullPtr gl_STREAM_DRAW
 
-    vs <- compileShader vShader gl_VERTEX_SHADER
-    fs <- compileShader fShader gl_FRAGMENT_SHADER
-    prog <- linkProgram vs fs
-    glUseProgram prog
+  vs <- compileShader vShader gl_VERTEX_SHADER
+  fs <- compileShader fShader gl_FRAGMENT_SHADER
+  prog <- linkProgram vs fs
+  glUseProgram prog
 
-    texUID <- useAsCString "tex" $ glGetUniformLocation prog . castPtr
-    glUniform1i texUID 0
+  texUID <- useAsCString "tex" $ glGetUniformLocation prog . castPtr
+  glUniform1i texUID 0
 
-    vPosition <- fmap fromIntegral . useAsCString "position" $
-                 glGetAttribLocation prog . castPtr
-    vTexPosition <- fmap fromIntegral . useAsCString "texPosition" $
+  vPosition <- fmap fromIntegral . useAsCString "position" $
+               glGetAttribLocation prog . castPtr
+  vTexPosition <- fmap fromIntegral . useAsCString "texPosition" $
+                  glGetAttribLocation prog . castPtr
+  vModulateColor <- fmap fromIntegral . useAsCString "blendColor" $
                     glGetAttribLocation prog . castPtr
-    vModulateColor <- fmap fromIntegral . useAsCString "blendColor" $
-                      glGetAttribLocation prog . castPtr
 
-    glVertexAttribPointer vPosition 2 gl_FLOAT (fromIntegral gl_FALSE)
-      (fromIntegral $ sizeOf (undefined :: Attributes)) $ intPtrToPtr 0
-    glVertexAttribPointer vTexPosition 2 gl_FLOAT (fromIntegral gl_FALSE)
-      (fromIntegral $ sizeOf (undefined :: Attributes)) . intPtrToPtr .
-      fromIntegral $ sizeOf (undefined :: V2 GLfloat)
-    glVertexAttribPointer vModulateColor 4 gl_FLOAT (fromIntegral gl_FALSE)
-      (fromIntegral $ sizeOf (undefined :: Attributes)) . intPtrToPtr .
-      fromIntegral $ sizeOf (undefined :: V2 GLfloat) * 2
+  glVertexAttribPointer vPosition 2 gl_FLOAT (fromIntegral gl_FALSE)
+    (fromIntegral $ sizeOf (undefined :: Attributes)) $ intPtrToPtr 0
+  glVertexAttribPointer vTexPosition 2 gl_FLOAT (fromIntegral gl_FALSE)
+    (fromIntegral $ sizeOf (undefined :: Attributes)) . intPtrToPtr .
+    fromIntegral $ sizeOf (undefined :: V2 GLfloat)
+  glVertexAttribPointer vModulateColor 4 gl_FLOAT (fromIntegral gl_FALSE)
+    (fromIntegral $ sizeOf (undefined :: Attributes)) . intPtrToPtr .
+    fromIntegral $ sizeOf (undefined :: V2 GLfloat) * 2
 
-    glEnableVertexAttribArray vPosition
-    glEnableVertexAttribArray vTexPosition
-    glEnableVertexAttribArray vModulateColor
+  glEnableVertexAttribArray vPosition
+  glEnableVertexAttribArray vTexPosition
+  glEnableVertexAttribArray vModulateColor
 
-    return $! GraphicsState vbo ibo vao prog
+  glUseProgram 0
+  glBindBuffer gl_ARRAY_BUFFER 0
+  glBindBuffer gl_ELEMENT_ARRAY_BUFFER 0
+  glBindVertexArray 0
+
+  return $! GraphicsState vbo ibo vao prog
