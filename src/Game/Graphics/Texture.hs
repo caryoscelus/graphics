@@ -85,6 +85,7 @@ data Alpha = Standard | Premultiplied deriving (Eq, Ord, Read, Show)
 -- the time it returns:
 --
 --   * GL_TEXTURE_2D will be unbound
+--   * GL_UNPACK_ALIGNMENT will be set to 1
 texture :: Alpha -> Sampling -> DynamicImage -> IO Texture
 texture alpha sampling dynImg =
   case dynImg of
