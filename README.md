@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/haskell-game/graphics.png)](https://travis-ci.org/haskell-game/graphics)
+[![Build Status](https://api.travis-ci.org/haskell-game/graphics.png)](https://api.travis-ci.org/haskell-game/graphics.png)
 
 This is a 2D graphics API using a similar denotation to that of
 [graphics-drawingcombinators](http://hackage.haskell.org/package/graphics-drawingcombinators),

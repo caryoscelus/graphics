@@ -60,7 +60,7 @@ executable example1
     buildable:       False
   build-depends:     base >= 4.5 && < 4.7,
                      colour == 2.3.*,
-                     GLFW-b == 1.0.*,
+                     GLFW-b == 0.1.*,
                      linear == 1.1.*,
                      graphics == 0.0.0,
                      time == 1.4.*
