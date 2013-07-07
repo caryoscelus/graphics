@@ -122,15 +122,17 @@ texture alpha sampling dynImg =
 -- the time it returns:
 --
 --   * GL_TEXTURE_2D will be unbound
+--   * GL_PIXEL_UNPACK_ALIGNMENT will be set to 1
 texImage2D :: Storable (PixelBaseComponent b) => Sampling -> GLenum -> GLenum -> GLenum -> Image b -> IO Texture
 texImage2D sampling internal format type_ img = do
   let w, h :: Num a => a
       w = fromIntegral $ imageWidth img
-      h = fromIntegral $ imageHeight img :: Num a => a
+      h = fromIntegral $ imageHeight img
   maxDim <- glGet gl_MAX_TEXTURE_SIZE
   when (maxDim < w || maxDim < h) . throwIO $ DimensionsTooLarge maxDim w h
   tid <- glGen glGenTextures
   glBindTexture gl_TEXTURE_2D tid
+  glPixelStorei gl_UNPACK_ALIGNMENT 1
   unsafeWith img $ glTexImage2D gl_TEXTURE_2D 0 (fromIntegral internal) w h 0 format type_
   setSampling sampling
   glTexParameteri gl_TEXTURE_2D gl_TEXTURE_WRAP_S $ fromIntegral gl_CLAMP_TO_EDGE
