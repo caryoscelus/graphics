@@ -122,7 +122,7 @@ texture alpha sampling dynImg =
 -- the time it returns:
 --
 --   * GL_TEXTURE_2D will be unbound
---   * GL_PIXEL_UNPACK_ALIGNMENT will be set to 1
+--   * GL_UNPACK_ALIGNMENT will be set to 1
 texImage2D :: Storable (PixelBaseComponent b) => Sampling -> GLenum -> GLenum -> GLenum -> Image b -> IO Texture
 texImage2D sampling internal format type_ img = do
   let w, h :: Num a => a
