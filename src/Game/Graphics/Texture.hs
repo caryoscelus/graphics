@@ -6,7 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Game.Graphics.Texture
        ( Texture (), Sampling (..), Alpha (..), TextureError (..)
-       , loadTexture , texture
+       , loadTexture, texture, freeTexture
        , texId, texSize
        ) where
 
@@ -17,6 +17,7 @@ import Control.Exception
 import Control.Monad
 import Data.Typeable
 import Data.Word
+import Foreign.Marshal.Utils
 import Foreign.Ptr
 import Foreign.Storable
 import Game.Graphics.Utils
@@ -29,6 +30,11 @@ data Texture =
   Texture { texId   :: !GLuint
           , texSize :: !(V2 Word)
           }
+
+-- | Delete a texture from the GPU. After freeing it, the texture and
+-- any derived values such as sprites are invalid.
+freeTexture :: Texture -> IO ()
+freeTexture t = with (texId t) $ glDeleteTextures 1
 
 -- TODO Add support for custom mipmaps, or write a high quality
 -- mipmapper right here. The main point is that I just don't trust all

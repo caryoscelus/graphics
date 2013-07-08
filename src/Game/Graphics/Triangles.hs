@@ -5,7 +5,11 @@
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns        #-}
-module Game.Graphics.Triangles (GraphicsState (), Triangles (), draw, applyTransform, sprite, initializeGraphics) where
+module Game.Graphics.Triangles
+       ( GraphicsState (), Triangles ()
+       , initializeGraphics, freeGraphics
+       , draw, applyTransform, sprite
+       ) where
 
 import Control.Applicative
 import Control.Monad
@@ -18,6 +22,8 @@ import Data.Foldable                        (toList)
 import Data.List
 import Data.Maybe
 import Data.Vector.Storable                 (Vector)
+import Foreign.Marshal.Array
+import Foreign.Marshal.Utils
 import Foreign.Ptr
 import Foreign.Storable
 import Game.Graphics.AffineTransform        (AffineTransform)
@@ -159,6 +165,14 @@ data GraphicsState =
                 , program :: !GLuint
                 }
 
+-- | Free the GPU resources associated with a 'GraphicsState'. After
+-- freeing it, you must not use it anymore.
+freeGraphics :: GraphicsState -> IO ()
+freeGraphics GraphicsState{..} = do
+  withArray [vbo, ibo] $ glDeleteBuffers 2
+  with vao $ glDeleteVertexArrays 1
+  glDeleteProgram program
+
 -- | This function will make the following changes to OpenGL state by
 -- the time it returns:
 --
@@ -247,6 +261,8 @@ initializeGraphics = do
   vs <- compileShader vShader gl_VERTEX_SHADER
   fs <- compileShader fShader gl_FRAGMENT_SHADER
   prog <- linkProgram vs fs
+  glDeleteShader vs
+  glDeleteShader fs
   glUseProgram prog
 
   texUID <- useAsCString "tex" $ glGetUniformLocation prog . castPtr

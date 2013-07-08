@@ -50,5 +50,7 @@ main = do
     GLFW.swapBuffers
   stop <- getCurrentTime
   let spf = realToFrac $ stop `diffUTCTime` start / frames :: Double
-  putStrLn $ show (round $ spf * 1000000 :: Int) ++ " us/frame, " ++ show (round $ recip spf :: Int) ++ " frames/s, " ++ show (round $ recip spf * 200 :: Int) ++ " sprites/s"
+  putStrLn $ show (round $ spf * 1000000 :: Int) ++ " us/frame"
+  freeTexture tex
+  freeGraphics graphicsState
   GLFW.terminate
