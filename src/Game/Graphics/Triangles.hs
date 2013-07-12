@@ -98,8 +98,8 @@ sprite tex color (V2 x y) (V2 w h) =
                       , V3 (V2 r t) (V2 l b) (V2 r b)
                       ]
   where !t = y
-        !r = x + w - 1
-        !b = y + h - 1
+        !r = x + w
+        !b = y + h
         !l = x
 
 bufferBytes :: Num a => a
