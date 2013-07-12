@@ -4,8 +4,8 @@ notifications:
   irc: "irc.freenode.org#haskell-game"
 
 before_install:
-  sudo apt-get update
-  sudo apt-get install libxxf86vm-dev
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq libxxf86vm-dev
 
 install:
   cabal install --only-dependencies --enable-tests --force-reinstalls
