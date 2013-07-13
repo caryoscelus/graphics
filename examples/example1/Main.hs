@@ -28,7 +28,7 @@ main = do
   window <- fromMaybe (error "failed to create window") <$>
             GLFW.createWindow windowWidth windowHeight "Wizard!" Nothing Nothing
   GLFW.makeContextCurrent $ Just window
---  GLFW.swapInterval 0
+  GLFW.swapInterval 0
   glViewport 0 0 windowWidth windowHeight
   graphicsState <- initializeGraphics
   tex <- either error id <$> loadTexture Standard Linear "examples/example1/wizard/wizard.png"
