@@ -1,6 +1,6 @@
 module Game.Graphics.Font where
 
-type Font = ()
+import Graphics.Rendering.FTGL
 
 data FontText = FontText
         { getString :: String
