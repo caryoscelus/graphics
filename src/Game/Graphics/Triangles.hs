@@ -9,6 +9,7 @@ module Game.Graphics.Triangles
        ( GraphicsState (), Triangles ()
        , initializeGraphics, freeGraphics
        , draw, applyTransform, sprite
+       , drawTriangleList, drawWrapper
        ) where
 
 import Control.Applicative

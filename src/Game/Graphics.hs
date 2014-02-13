@@ -91,11 +91,18 @@ getTriangle _ = error "Not a triangle sprite"
 --   * GL_FRAMEBUFFER_SRGB will be enabled on the current framebuffer
 draw :: GraphicsState -> Space Sprite -> IO Bool
 {-# INLINE draw #-}
-draw gs sp = Triangles.draw gs triangles
+draw gs spriteSpace = Triangles.drawWrapper gs drawer
     where
-        triangles = map ttran . filter (isTriangle . fst) $ sprites
-        sprites = runSpace $ sp
-        ttran (spr, trans) = Triangles.applyTransform trans $ getTriangle spr
+        drawer = foldM (\success (spr, trans) ->
+            if success then
+                case spr of
+                    SpriteTriangle t -> do
+                        let t' = Triangles.applyTransform trans t
+                        Triangles.drawTriangleList [t']
+                    SpriteFont _ -> return True
+            else
+                return False
+            ) True $ runSpace spriteSpace
 
 clear :: IO ()
 {-# INLINE clear #-}
