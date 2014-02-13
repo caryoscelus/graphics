@@ -173,6 +173,15 @@ freeGraphics GraphicsState{..} = do
   with vao $ glDeleteVertexArrays 1
   glDeleteProgram program
 
+draw :: GraphicsState -> [Triangles] -> IO Bool
+draw gs = drawWrapper gs . drawTriangleList
+
+drawTriangleList :: [Triangles] -> IO Bool
+drawTriangleList tris = do
+  foldM (\ !success (elemOff, attrOff, ts) ->
+          (&&success) <$> drawTriangles elemOff attrOff ts)
+    True $ chunksToDraw tris
+
 -- | This function will make the following changes to OpenGL state by
 -- the time it returns:
 --
@@ -184,8 +193,8 @@ freeGraphics GraphicsState{..} = do
 --   * the blend function will be set to GL_ONE, GL_ONE_MINUS_SRC_ALPHA
 --   * blending will be enabled
 --   * GL_FRAMEBUFFER_SRGB will be enabled on the current framebuffer
-draw :: GraphicsState -> [Triangles] -> IO Bool
-draw GraphicsState{..} tris = do
+drawWrapper :: GraphicsState -> IO Bool -> IO Bool
+drawWrapper GraphicsState{..} drawBody = do
   glBindVertexArray vao
   glUseProgram program -- assume that the uniform for the sampler is already set
   glActiveTexture gl_TEXTURE0
@@ -195,9 +204,7 @@ draw GraphicsState{..} tris = do
   glBlendFunc gl_ONE gl_ONE_MINUS_SRC_ALPHA
   glEnable gl_BLEND
 
-  !drewCleanly <- foldM (\ !success (elemOff, attrOff, ts) ->
-                          (&&success) <$> drawTriangles elemOff attrOff ts)
-                  True $ chunksToDraw tris
+  !drewCleanly <- drawBody
 
   glUseProgram 0
   glBindBuffer gl_ARRAY_BUFFER 0
