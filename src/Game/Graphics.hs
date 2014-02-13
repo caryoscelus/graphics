@@ -11,6 +11,7 @@ module Game.Graphics
        , GraphicsState (), Triangles.initializeGraphics
        , Triangles.freeGraphics, draw, clear
        , GLfloat, glViewport
+       , Font.Font, Font.loadFont, fontMessage
        ) where
 
 import Control.Applicative
@@ -99,7 +100,7 @@ draw gs spriteSpace = Triangles.drawWrapper gs drawer
                     SpriteTriangle t -> do
                         let t' = Triangles.applyTransform trans t
                         Triangles.drawTriangleList [t']
-                    SpriteFont _ -> return True
+                    SpriteFont ft -> Font.drawFontText trans ft
             else
                 return False
             ) True $ runSpace spriteSpace
@@ -115,3 +116,6 @@ modulatedSprite color pos dim tex = return . SpriteTriangle $! Triangles.sprite 
 sprite :: V2 Int -> V2 Int -> Texture -> Space Sprite
 {-# INLINE sprite #-}
 sprite = modulatedSprite (opaque (white :: Colour GLfloat))
+
+fontMessage :: Font.Font -> String -> Space Sprite
+fontMessage font text = return . SpriteFont . Font.FontText font $ text
