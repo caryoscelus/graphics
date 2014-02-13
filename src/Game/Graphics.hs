@@ -29,6 +29,7 @@ import Linear.V2
 
 import qualified Game.Graphics.AffineTransform as Transform
 import qualified Game.Graphics.Triangles       as Triangles
+import qualified Game.Graphics.Font            as Font
 
 newtype Space a = Space { unSpace :: WriterT AffineTransform [] a }
                 deriving ( Functor, Applicative, Alternative, Monad
@@ -63,7 +64,19 @@ reflect :: V2 GLfloat -> Space ()
 {-# INLINE reflect #-}
 reflect = transform . Transform.reflect
 
-type Sprite = Triangles.Triangles
+data Sprite = SpriteTriangle Triangles.Triangles | SpriteFont Font.FontText
+
+isTriangle :: Sprite -> Bool
+isTriangle (SpriteTriangle _) = True
+isTriangle _ = False
+
+isFont :: Sprite -> Bool
+isFont (SpriteFont _) = True
+isFont _ = False
+
+getTriangle :: Sprite -> Triangles.Triangles
+getTriangle (SpriteTriangle x) = x
+getTriangle _ = error "Not a triangle sprite"
 
 -- | This function will make the following changes to OpenGL state by
 -- the time it returns:
@@ -78,7 +91,11 @@ type Sprite = Triangles.Triangles
 --   * GL_FRAMEBUFFER_SRGB will be enabled on the current framebuffer
 draw :: GraphicsState -> Space Sprite -> IO Bool
 {-# INLINE draw #-}
-draw gs = Triangles.draw gs . map (uncurry $ flip Triangles.applyTransform) . runSpace
+draw gs sp = Triangles.draw gs triangles
+    where
+        triangles = map ttran . filter (isTriangle . fst) $ sprites
+        sprites = runSpace $ sp
+        ttran (spr, trans) = Triangles.applyTransform trans $ getTriangle spr
 
 clear :: IO ()
 {-# INLINE clear #-}
@@ -86,7 +103,7 @@ clear = glClear gl_COLOR_BUFFER_BIT
 
 modulatedSprite :: AlphaColour GLfloat -> V2 Int -> V2 Int -> Texture -> Space Sprite
 {-# INLINE modulatedSprite #-}
-modulatedSprite color pos dim tex = return $! Triangles.sprite tex color pos dim
+modulatedSprite color pos dim tex = return . SpriteTriangle $! Triangles.sprite tex color pos dim
 
 sprite :: V2 Int -> V2 Int -> Texture -> Space Sprite
 {-# INLINE sprite #-}
