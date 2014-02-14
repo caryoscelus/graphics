@@ -6,10 +6,12 @@ module Game.Graphics.AffineTransform
        ( AffineTransform ()
        , translate, rotate, scale, shear, reflect, invert
        , apply, applyFourCorners01
+       , withTransformRasterGl
        ) where
 
 import Data.Monoid
 import Graphics.Rendering.OpenGL.Raw.Core31
+import Graphics.Rendering.OpenGL.Raw
 import Linear.V2
 
 -- TODO applyFourCorners01 may be fairly implementation-revealing and
@@ -84,3 +86,11 @@ applyFourCorners01 (A2D a11 a12 a13
         !zo = V2 a12 a22
         !oz = V2 a11 a21
         !zzzo = zz + zo
+
+applyRasterMatrix :: AffineTransform -> IO ()
+applyRasterMatrix (A2D a11 a12 a13
+                       a21 a22 a23) = do
+    glRasterPos2f a13 a23
+
+withTransformRasterGl :: AffineTransform -> IO a -> IO a
+withTransformRasterGl m f = applyRasterMatrix m >> f

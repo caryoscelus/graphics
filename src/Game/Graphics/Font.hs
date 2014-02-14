@@ -8,7 +8,7 @@ module Game.Graphics.Font
 
 import Graphics.Rendering.FTGL
 
-import Game.Graphics.AffineTransform        (AffineTransform)
+import Game.Graphics.AffineTransform (AffineTransform, withTransformRasterGl)
 
 data FontText = FontText
         { getFont :: Font
@@ -19,7 +19,8 @@ loadFont :: String -> IO Font
 loadFont = createPixmapFont
 
 drawFontText :: AffineTransform -> FontText -> IO Bool
-drawFontText _ FontText{..} = do
+drawFontText trans FontText{..} = do
     setFontFaceSize getFont 24 72
-    renderFont getFont getString Front
+    withTransformRasterGl trans $
+        renderFont getFont getString Front
     return True
