@@ -20,7 +20,7 @@ import Control.Monad.Fix
 import Control.Monad.Trans.Writer.Stricter
 import Data.Colour
 import Data.Colour.Names                    (white)
-import Data.Foldable
+import Data.Foldable hiding                 (mapM_)
 import Data.Traversable
 import Game.Graphics.AffineTransform        (AffineTransform)
 import Game.Graphics.Texture
@@ -79,6 +79,10 @@ getTriangle :: Sprite -> Triangles.Triangles
 getTriangle (SpriteTriangle x) = x
 getTriangle _ = error "Not a triangle sprite"
 
+getFont :: Sprite -> Font.FontText
+getFont (SpriteFont x) = x
+getFont _ = error "Not a font sprite"
+
 -- | This function will make the following changes to OpenGL state by
 -- the time it returns:
 --
@@ -94,16 +98,15 @@ draw :: GraphicsState -> Space Sprite -> IO Bool
 {-# INLINE draw #-}
 draw gs spriteSpace = Triangles.drawWrapper gs drawer
     where
-        drawer = foldM (\success (spr, trans) ->
-            if success then
-                case spr of
-                    SpriteTriangle t -> do
-                        let t' = Triangles.applyTransform trans t
-                        Triangles.drawTriangleList [t']
-                    SpriteFont ft -> Font.drawFontText trans ft
-            else
-                return False
-            ) True $ runSpace spriteSpace
+        drawer = do
+            ok <- Triangles.drawTriangleList triangles
+            mapM_ (uncurry Font.drawFontText) texts
+            return ok
+        texts = map ftran . filter (isFont . fst) $ sprites
+        triangles = map ttran . filter (isTriangle . fst) $ sprites
+        sprites = runSpace $ spriteSpace
+        ttran (spr, trans) = Triangles.applyTransform trans $ getTriangle spr
+        ftran (spr, trans) = (trans, getFont spr)
 
 clear :: IO ()
 {-# INLINE clear #-}
